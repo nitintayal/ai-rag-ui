@@ -1,16 +1,206 @@
-# React + Vite
+# ai-rag-ui
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+💬 **React Chat UI for the AI RAG Agent**
 
-Currently, two official plugins are available:
+A modern **ChatGPT-style interface** built with **React, Vite, and Tailwind CSS** that connects to the **AI RAG Agent backend**.
+The UI enables users to interact with a Retrieval-Augmented Generation (RAG) system through a **streaming chat interface**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+# 🚀 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* 💬 ChatGPT-style chat interface
+* ⚡ Streaming responses from backend
+* 📜 Chat message bubbles
+* 📂 Sidebar chat layout
+* ⌨️ Enter-to-send messages
+* 🔄 Auto-scroll to latest message
+* 🎨 Tailwind CSS styling
+* 🔗 FastAPI backend integration
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# 🧠 Architecture
+
+```
+User
+ ↓
+React Chat UI
+ ↓
+FastAPI API (/ask)
+ ↓
+LangGraph Agent
+ ↓
+RAG Retrieval
+ ↓
+Vector Database (FAISS)
+ ↓
+Local LLM
+ ↓
+Streaming Response
+```
+
+The UI receives **streamed responses** from the backend and displays them progressively to simulate a **typing effect similar to ChatGPT**.
+
+---
+
+# 🛠 Tech Stack
+
+* **React**
+* **Vite**
+* **Tailwind CSS**
+* **JavaScript (ES6+)**
+* **Fetch API (ReadableStream for streaming)**
+
+---
+
+# 📂 Project Structure
+
+```
+ai-rag-ui
+│
+├── src
+│   ├── components
+│   │   ├── Sidebar.jsx
+│   │   ├── ChatWindow.jsx
+│   │   ├── Message.jsx
+│   │   └── InputBox.jsx
+│   │
+│   ├── App.jsx
+│   └── index.css
+│
+├── index.html
+├── package.json
+└── vite.config.js
+```
+
+---
+
+# ▶️ Run Locally
+
+### 1️⃣ Install dependencies
+
+```
+npm install
+```
+
+### 2️⃣ Start development server
+
+```
+npm run dev
+```
+
+Open the application:
+
+```
+http://localhost:5173
+```
+
+---
+
+# 🔗 Backend Dependency
+
+This UI connects to the **AI RAG Agent backend**.
+
+Backend repository:
+
+```
+ai-rag-agent
+```
+
+Start the backend server:
+
+```
+uvicorn api:app --reload
+```
+
+Default API endpoint used by the UI:
+
+```
+http://localhost:8000/ask
+```
+
+---
+
+# 💬 Example Request
+
+User asks:
+
+```
+What employee information is available?
+```
+
+The UI sends:
+
+```
+POST /ask
+{
+  "question": "What employee information is available?"
+}
+```
+
+The backend streams the answer, which is rendered progressively in the chat interface.
+
+---
+
+# 📸 UI Layout
+
+```
+----------------------------------------
+| Sidebar |                            |
+| Chats   |        Chat Messages       |
+|         |                            |
+|         |                            |
+|         |----------------------------|
+|         |   Send message input       |
+----------------------------------------
+```
+
+---
+
+# 🔄 Streaming Responses
+
+The UI reads streamed responses using the **ReadableStream API**:
+
+```javascript
+const reader = res.body.getReader()
+```
+
+This enables **real-time incremental response rendering**.
+
+---
+
+# 🧩 Future Enhancements
+
+Planned improvements include:
+
+* 📜 Markdown rendering for answers
+* 🌙 Dark mode support
+* 🧠 Chat history persistence
+* 📂 Document upload for RAG ingestion
+* ⚡ WebSocket streaming
+* 🔐 Wallet / Web3 integration
+
+---
+
+# 🔗 Related Repository
+
+Backend AI agent:
+
+```
+ai-rag-agent
+```
+
+Provides:
+
+* LangGraph agent orchestration
+* Retrieval-Augmented Generation (RAG)
+* FAISS vector database
+* Local LLM inference
+* FastAPI API layer
+
+---
+
+# 📜 License
+
+MIT License
