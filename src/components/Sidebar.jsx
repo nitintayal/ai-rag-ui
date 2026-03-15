@@ -1,3 +1,5 @@
+import FileUpload from "./FileUpload";
+
 export default function Sidebar() {
 
   return (
@@ -9,7 +11,7 @@ export default function Sidebar() {
         <button className="w-full bg-gray-800 p-3 rounded-lg hover:bg-gray-700">
           + New Chat
         </button>
-
+        <FileUpload />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">

@@ -27,7 +27,7 @@ export default function InputBox({ messages, setMessages }) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
 
-      let agentText = "";
+      let agentText = "", sources = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -35,17 +35,28 @@ export default function InputBox({ messages, setMessages }) {
 
         agentText += decoder.decode(value);
 
+                // Detect sources block
+        if (agentText.includes("Sources:")) {
+
+          const lines = agentText.split("\n");
+
+          sources = lines
+            .filter((l) => l.startsWith("-"))
+            .map((l) => l.replace("- ", ""));
+
+        } 
+
         setMessages((prev) => {
           const last = prev[prev.length - 1];
 
           if (last?.role === "agent") {
             return [
               ...prev.slice(0, -1),
-              { role: "agent", text: agentText },
+              { role: "agent", text: agentText, sources: sources },
             ];
           }
 
-          return [...prev, { role: "agent", text: agentText }];
+          return [...prev, { role: "agent", text: agentText, sources: sources }];
         });
       }
     } catch (err) {
