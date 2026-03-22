@@ -1,9 +1,8 @@
 import { useState } from "react";
 
-export default function InputBox({ messages, setMessages }) {
+export default function InputBox({ messages, setMessages,loading, setLoading }) {
 
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const sendMessage = async () => {
     if (!input || loading) return;
