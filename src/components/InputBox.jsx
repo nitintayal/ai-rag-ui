@@ -1,7 +1,31 @@
 import { useState } from "react";
 
-export default function InputBox({ messages, setMessages,loading, setLoading }) {
+function extractSources(rawText) {
+  const sourceBlockPattern = /\bSOURCES?\s*:\s*(\[[\s\S]*?\])/i;
+  const match = rawText.match(sourceBlockPattern);
 
+  if (!match) {
+    return { text: rawText, sources: null };
+  }
+
+  try {
+    const parsed = JSON.parse(match[1]);
+    const sources = Array.isArray(parsed)
+      ? parsed.filter((item) => typeof item === "string" && item.trim())
+      : null;
+
+    const text = rawText
+      .replace(sourceBlockPattern, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    return { text, sources };
+  } catch {
+    return { text: rawText, sources: null };
+  }
+}
+
+export default function InputBox({ messages, setMessages, loading, setLoading }) {
   const [input, setInput] = useState("");
 
   const sendMessage = async () => {
@@ -32,18 +56,9 @@ export default function InputBox({ messages, setMessages,loading, setLoading }) 
         const { done, value } = await reader.read();
         if (done) break;
 
-        agentText += decoder.decode(value);
-
-                // Detect sources block
-        if (agentText.includes("Sources:")) {
-
-          const lines = agentText.split("\n");
-
-          sources = lines
-            .filter((l) => l.startsWith("-"))
-            .map((l) => l.replace("- ", ""));
-
-        } 
+        agentText += decoder.decode(value, { stream: true });
+        const parsed = extractSources(agentText);
+        sources = parsed.sources;
 
         setMessages((prev) => {
           const last = prev[prev.length - 1];
@@ -51,11 +66,11 @@ export default function InputBox({ messages, setMessages,loading, setLoading }) 
           if (last?.role === "agent") {
             return [
               ...prev.slice(0, -1),
-              { role: "agent", text: agentText, sources: sources },
+              { role: "agent", text: parsed.text, sources },
             ];
           }
 
-          return [...prev, { role: "agent", text: agentText, sources: sources }];
+          return [...prev, { role: "agent", text: parsed.text, sources }];
         });
       }
     } catch (err) {
@@ -70,30 +85,24 @@ export default function InputBox({ messages, setMessages,loading, setLoading }) 
   };
 
   return (
-
-    <div className="border-t bg-white p-4">
-
-      <div className="max-w-3xl mx-auto flex gap-3">
-
+    <div className="border-t border-slate-200 bg-white p-4 sm:px-6">
+      <div className="mx-auto flex max-w-3xl gap-3">
         <input
-          className="flex-1 border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-black"
+          className="flex-1 rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
           value={input}
-          onChange={(e)=>setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Send a message..."
+          placeholder="Ask about your files..."
         />
 
         <button
           onClick={sendMessage}
           disabled={loading}
-          className="bg-black text-white px-5 py-3 rounded-xl hover:bg-gray-800 transition"
+          className="rounded-xl bg-slate-900 px-5 py-3 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           {loading ? "..." : "Send"}
         </button>
-
       </div>
-
     </div>
-
   );
 }
