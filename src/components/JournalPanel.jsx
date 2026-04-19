@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
 
 const JOURNAL_USER_ID = "demo-user";
+const JOURNAL_PAGE_SIZE = 10;
+const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function getCurrentTimeLabel() {
   return new Date().toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: USER_TIME_ZONE,
   });
 }
 
 function getCurrentDateValue() {
-  return new Date().toLocaleDateString("en-CA");
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: USER_TIME_ZONE,
+  });
 }
 
 function formatEntryDate(value) {
@@ -27,6 +32,7 @@ function formatEntryDate(value) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: USER_TIME_ZONE,
   });
 }
 
@@ -43,6 +49,7 @@ function formatEntryTime(value) {
   return date.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: USER_TIME_ZONE,
   });
 }
 
@@ -59,6 +66,9 @@ function mapApiEntryToCard(entry) {
 
 export default function JournalPanel() {
   const [entries, setEntries] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [isShowingSearchResults, setIsShowingSearchResults] = useState(false);
   const [draft, setDraft] = useState({
     title: "",
     mood: "Fresh",
@@ -70,36 +80,69 @@ export default function JournalPanel() {
   const [deletingEntryId, setDeletingEntryId] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [isLoadingEntries, setIsLoadingEntries] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [hasMoreEntries, setHasMoreEntries] = useState(false);
+  const [totalEntries, setTotalEntries] = useState(0);
 
-  useEffect(() => {
-    const loadEntries = async () => {
+  const loadEntries = async ({ nextOffset = 0, append = false } = {}) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
       setIsLoadingEntries(true);
-      setLoadError("");
+    }
+    setLoadError("");
 
-      try {
-        const response = await fetch(
-          `http://localhost:8000/journal/entries?user_id=${encodeURIComponent(
-            JOURNAL_USER_ID
-          )}`
-        );
+    try {
+      const response = await fetch(
+        `http://localhost:8000/journal/entries?user_id=${encodeURIComponent(
+          JOURNAL_USER_ID
+        )}&limit=${JOURNAL_PAGE_SIZE}&offset=${nextOffset}`
+      );
 
-        if (!response.ok) {
-          throw new Error(`Load failed with status ${response.status}`);
-        }
+      if (!response.ok) {
+        throw new Error(`Load failed with status ${response.status}`);
+      }
 
-        const data = await response.json();
-        setEntries(data.map(mapApiEntryToCard));
-      } catch (error) {
-        setLoadError("Unable to load saved journal entries from the backend.");
-        console.error(error);
-      } finally {
+      const page = await response.json();
+      const mappedEntries = page.items.map(mapApiEntryToCard);
+
+      setEntries((prev) => (append ? [...prev, ...mappedEntries] : mappedEntries));
+      setOffset(page.offset + page.items.length);
+      setHasMoreEntries(page.has_more);
+      setTotalEntries(page.total);
+      setIsShowingSearchResults(false);
+    } catch (error) {
+      setLoadError("Unable to load saved journal entries from the backend.");
+      console.error(error);
+    } finally {
+      if (append) {
+        setIsLoadingMore(false);
+      } else {
         setIsLoadingEntries(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     loadEntries();
   }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+
+    const timeoutId = setTimeout(() => {
+      if (query) {
+        handleSearch(query);
+        return;
+      }
+
+      loadEntries();
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const startNewEntry = () => {
     setDraft({
@@ -135,13 +178,13 @@ export default function JournalPanel() {
       headers: {
         "Content-Type": "application/json",
       },
-        body: JSON.stringify({
-          user_id: JOURNAL_USER_ID,
-          title,
-          content: body,
-          mood: mood || null,
-          entry_date: getCurrentDateValue(),
-        }),
+      body: JSON.stringify({
+        user_id: JOURNAL_USER_ID,
+        title,
+        content: body,
+        mood: mood || null,
+        entry_date: getCurrentDateValue(),
+      }),
     });
 
     if (!response.ok) {
@@ -180,15 +223,19 @@ export default function JournalPanel() {
 
     try {
       const savedEntry = await createJournalEntry({ title, body, mood });
+      const mappedEntry = mapApiEntryToCard(savedEntry);
 
       if (editingEntryId) {
         await deleteJournalEntry(editingEntryId);
-        setEntries((prev) =>
-          [mapApiEntryToCard(savedEntry), ...prev.filter((entry) => entry.id !== editingEntryId)]
-        );
+        setEntries((prev) => [
+          mappedEntry,
+          ...prev.filter((entry) => entry.id !== editingEntryId),
+        ]);
       } else {
-        setEntries((prev) => [mapApiEntryToCard(savedEntry), ...prev]);
+        setEntries((prev) => [mappedEntry, ...prev]);
+        setTotalEntries((prev) => prev + 1);
       }
+
       setDraft({
         title: "",
         mood: "Fresh",
@@ -219,6 +266,7 @@ export default function JournalPanel() {
     try {
       await deleteJournalEntry(entryId);
       setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
+      setTotalEntries((prev) => Math.max(0, prev - 1));
 
       if (editingEntryId === entryId) {
         cancelDraft();
@@ -229,6 +277,58 @@ export default function JournalPanel() {
     } finally {
       setDeletingEntryId(null);
     }
+  };
+
+  const handleSearch = async (rawQuery = searchQuery) => {
+    const query = rawQuery.trim();
+
+    if (!query || isSearching) {
+      return;
+    }
+
+    setIsSearching(true);
+    setLoadError("");
+
+    try {
+      const response = await fetch("http://localhost:8000/journal/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: JOURNAL_USER_ID,
+          query,
+          k: 10,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Search failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setEntries(data.map((item) => mapApiEntryToCard(item.entry)));
+      setIsShowingSearchResults(true);
+      setHasMoreEntries(false);
+    } catch (error) {
+      setLoadError("Unable to search journal entries from the backend.");
+      console.error(error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = async () => {
+    setSearchQuery("");
+    await loadEntries();
+  };
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || isSearching || isShowingSearchResults || !hasMoreEntries) {
+      return;
+    }
+
+    await loadEntries({ nextOffset: offset, append: true });
   };
 
   return (
@@ -255,15 +355,42 @@ export default function JournalPanel() {
           Keep decisions, summaries, and follow-ups visible while the RAG
           assistant continues the conversation in parallel.
         </p>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search journal entries..."
+            className="flex-1 rounded-xl border border-amber-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-amber-400"
+          />
+          <button
+            type="button"
+            onClick={() => handleSearch()}
+            disabled={isSearching}
+            className="rounded-xl bg-amber-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-300"
+          >
+            {isSearching ? "Searching..." : "Search"}
+          </button>
+          <button
+            type="button"
+            onClick={clearSearch}
+            disabled={isLoadingEntries}
+            className="rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-medium text-amber-900 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-3 border-b border-amber-200/70 bg-white/40 px-5 py-4 text-sm text-slate-600 sm:grid-cols-3 sm:px-6">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-            Today
+            Showing
           </p>
           <p className="mt-1 font-semibold text-slate-900">
-            {entries.length} entries
+            {entries.length}
+            {isShowingSearchResults ? " results" : ` of ${totalEntries}`}
           </p>
         </div>
         <div>
@@ -277,7 +404,13 @@ export default function JournalPanel() {
             Sync
           </p>
           <p className="mt-1 font-semibold text-emerald-700">
-            {isCreating ? "Draft open" : "Live draft"}
+            {isSearching
+              ? "Searching"
+              : isShowingSearchResults
+                ? "Filtered"
+                : isCreating
+                  ? "Draft open"
+                  : "Live draft"}
           </p>
         </div>
       </div>
@@ -369,7 +502,8 @@ export default function JournalPanel() {
 
         {!isLoadingEntries && !loadError && entries.length === 0 ? (
           <div className="rounded-[22px] border border-dashed border-amber-300 bg-white/70 p-5 text-sm leading-6 text-slate-500">
-            No saved journal entries yet. Create one with <span className="font-medium text-slate-700">New Entry</span>.
+            No saved journal entries yet. Create one with{" "}
+            <span className="font-medium text-slate-700">New Entry</span>.
           </div>
         ) : null}
 
@@ -414,6 +548,23 @@ export default function JournalPanel() {
             </p>
           </article>
         ))}
+
+        {!isLoadingEntries && !isShowingSearchResults && entries.length > 0 ? (
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={!hasMoreEntries || isLoadingMore}
+              className="rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-medium text-amber-900 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingMore
+                ? "Loading..."
+                : hasMoreEntries
+                  ? "Load more"
+                  : "All entries loaded"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
