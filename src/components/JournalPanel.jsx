@@ -194,6 +194,32 @@ export default function JournalPanel() {
     return response.json();
   };
 
+  const updateJournalEntry = async ({ entryId, title, body, mood }) => {
+    const response = await fetch(
+      `http://localhost:8000/journal/entries/${entryId}?user_id=${encodeURIComponent(
+        JOURNAL_USER_ID
+      )}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content: body,
+          mood: mood || null,
+          entry_date: getCurrentDateValue(),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Update failed with status ${response.status}`);
+    }
+
+    return response.json();
+  };
+
   const deleteJournalEntry = async (entryId) => {
     const response = await fetch(
       `http://localhost:8000/journal/entries/${entryId}?user_id=${encodeURIComponent(
@@ -222,11 +248,17 @@ export default function JournalPanel() {
     setSaveError("");
 
     try {
-      const savedEntry = await createJournalEntry({ title, body, mood });
+      const savedEntry = editingEntryId
+        ? await updateJournalEntry({
+            entryId: editingEntryId,
+            title,
+            body,
+            mood,
+          })
+        : await createJournalEntry({ title, body, mood });
       const mappedEntry = mapApiEntryToCard(savedEntry);
 
       if (editingEntryId) {
-        await deleteJournalEntry(editingEntryId);
         setEntries((prev) => [
           mappedEntry,
           ...prev.filter((entry) => entry.id !== editingEntryId),
