@@ -1,12 +1,11 @@
 import FileUpload from "./FileUpload";
 
-const libraryItems = ["Employee Policy", "Leave Rules"];
-
 export default function Sidebar({
   activeView,
   setActiveView,
   isExpanded,
   setIsExpanded,
+  onNewChat,
 }) {
   const navItemClass = (view) =>
     `w-full rounded-xl p-3 text-left transition ${
@@ -41,7 +40,7 @@ export default function Sidebar({
 
         <button
           type="button"
-          onClick={() => setActiveView("chat")}
+          onClick={onNewChat}
           className={`mt-3 rounded-xl bg-slate-900 text-left transition hover:bg-slate-800 ${
             isExpanded ? "w-full p-3" : "w-full px-3 py-3 text-center"
           }`}
@@ -69,6 +68,14 @@ export default function Sidebar({
           </button>
           <button
             type="button"
+            onClick={() => setActiveView("tasks")}
+            className={`${navItemClass("tasks")} ${isExpanded ? "" : "px-2 text-center"}`}
+            title="Tasks"
+          >
+            {isExpanded ? "Tasks" : "T"}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveView("journal")}
             className={`${navItemClass("journal")} ${isExpanded ? "" : "px-2 text-center"}`}
             title="Journal"
@@ -78,44 +85,14 @@ export default function Sidebar({
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto ${isExpanded ? "p-3" : "p-2"}`}>
-        {isExpanded ? (
-          <>
-            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-              Library
-            </p>
-            <div className="space-y-2">
-              {libraryItems.map((item) => (
-                <div
-                  key={item}
-                  className="cursor-pointer rounded-xl p-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="space-y-2">
-            {libraryItems.map((item, index) => (
-              <div
-                key={item}
-                className="cursor-pointer rounded-xl p-3 text-center text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                title={item}
-              >
-                {index + 1}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <div className="flex-1" />
 
       <div
         className={`border-t border-slate-800 text-sm text-slate-400 ${
           isExpanded ? "p-4" : "p-3 text-center"
         }`}
       >
-        {isExpanded ? "AI RAG Agent" : "AI"}
+        {isExpanded ? "AI Personal Assistant" : "AI"}
       </div>
     </aside>
   );

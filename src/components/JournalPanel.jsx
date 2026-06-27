@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const JOURNAL_USER_ID = "demo-user";
+const JOURNAL_USER_ID = "default-user";
 const JOURNAL_PAGE_SIZE = 10;
 const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 

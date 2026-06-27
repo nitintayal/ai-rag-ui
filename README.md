@@ -1,206 +1,116 @@
-# ai-rag-ui
+# AI Personal Assistant — Frontend
 
-💬 **React Chat UI for the AI RAG Agent**
+React chat UI for the AI Personal Assistant backend. Features streaming chat, task management, journal with semantic search, and document upload.
 
-A modern **ChatGPT-style interface** built with **React, Vite, and Tailwind CSS** that connects to the **AI RAG Agent backend**.
-The UI enables users to interact with a Retrieval-Augmented Generation (RAG) system through a **streaming chat interface**.
+## Features
 
----
+- **Streaming chat** — real-time token-by-token responses via Server-Sent Events (SSE)
+- **Multi-turn conversations** — context maintained across messages via `conversation_id`
+- **Task manager** — create, complete, filter by status, prioritize, and delete tasks
+- **Journal** — create, edit, delete, search (semantic), and paginate journal entries
+- **Document upload** — PDF, TXT, XLSX file ingestion into the knowledge base
+- **Markdown rendering** — formatted AI responses with react-markdown
+- **Source citations** — clickable source links (documents and URLs) on AI responses
+- **Responsive layout** — collapsible sidebar, mobile-friendly design
 
-# 🚀 Features
+## Tech Stack
 
-* 💬 ChatGPT-style chat interface
-* ⚡ Streaming responses from backend
-* 📜 Chat message bubbles
-* 📂 Sidebar chat layout
-* ⌨️ Enter-to-send messages
-* 🔄 Auto-scroll to latest message
-* 🎨 Tailwind CSS styling
-* 🔗 FastAPI backend integration
+- **React 19** — functional components with hooks
+- **Vite** — build tool and dev server
+- **Tailwind CSS** — utility-first styling
+- **react-markdown** — markdown rendering for AI responses
+- **Fetch API** — SSE streaming via ReadableStream
 
----
-
-# 🧠 Architecture
-
-```
-User
- ↓
-React Chat UI
- ↓
-FastAPI API (/ask)
- ↓
-LangGraph Agent
- ↓
-RAG Retrieval
- ↓
-Vector Database (FAISS)
- ↓
-Local LLM
- ↓
-Streaming Response
-```
-
-The UI receives **streamed responses** from the backend and displays them progressively to simulate a **typing effect similar to ChatGPT**.
-
----
-
-# 🛠 Tech Stack
-
-* **React**
-* **Vite**
-* **Tailwind CSS**
-* **JavaScript (ES6+)**
-* **Fetch API (ReadableStream for streaming)**
-
----
-
-# 📂 Project Structure
+## Project Structure
 
 ```
-ai-rag-ui
+src/
+├── main.jsx                    # React root
+├── App.jsx                     # Root component, view switching, conversation state
+├── index.css                   # Tailwind directives
+└── components/
+    ├── ChatWindow.jsx          # Chat container, message list, auto-scroll
+    ├── InputBox.jsx            # Chat input, SSE streaming handler, source parsing
+    ├── Message.jsx             # Message bubble, markdown, source links
+    ├── Sidebar.jsx             # Navigation (Chat, Tasks, Journal), file upload
+    ├── FileUpload.jsx          # Document upload widget
+    ├── TasksPanel.jsx          # Task CRUD, status filters, priority badges
+    └── JournalPanel.jsx        # Journal CRUD, semantic search, pagination
+```
+
+## Component Architecture
+
+```
+App (state: activeView, conversationId)
+├── Sidebar
+│   ├── New Chat button
+│   ├── FileUpload (PDF/TXT/XLSX)
+│   └── Nav: Chat | Tasks | Journal
 │
-├── src
-│   ├── components
-│   │   ├── Sidebar.jsx
-│   │   ├── ChatWindow.jsx
-│   │   ├── Message.jsx
-│   │   └── InputBox.jsx
-│   │
-│   ├── App.jsx
-│   └── index.css
-│
-├── index.html
-├── package.json
-└── vite.config.js
+└── Main Content (conditional render)
+    ├── ChatWindow (activeView === "chat")
+    │   ├── Message[] (user: green, agent: white+border)
+    │   │   ├── ReactMarkdown
+    │   │   └── Source pills (clickable links)
+    │   ├── Typing indicator (animated dots)
+    │   └── InputBox
+    │       └── SSE stream → parse tokens → update messages
+    │
+    ├── TasksPanel (activeView === "tasks")
+    │   ├── Status filters (All, Pending, In Progress, Done)
+    │   ├── New task form (title, description, due date, priority)
+    │   └── Task cards (checkbox toggle, priority badge, delete)
+    │
+    └── JournalPanel (activeView === "journal")
+        ├── Semantic search bar
+        ├── New/edit entry form (title, mood, content)
+        ├── Entry cards (edit, delete)
+        └── Pagination (load more)
 ```
 
----
+## Setup
 
-# ▶️ Run Locally
-
-### 1️⃣ Install dependencies
-
-```
+```bash
 npm install
-```
-
-### 2️⃣ Start development server
-
-```
 npm run dev
 ```
 
-Open the application:
+Opens at `http://localhost:5173`. Requires the backend running at `http://localhost:8000`.
+
+## API Integration
+
+All API calls target `http://localhost:8000`. The SSE chat endpoint returns `data: {token}` events for real-time streaming.
+
+| Endpoint | Method | Component | Purpose |
+|----------|--------|-----------|---------|
+| `/chat` | POST | InputBox | SSE streaming chat with `{question, user_id, conversation_id}` |
+| `/upload` | POST | FileUpload | Upload PDF/TXT/XLSX documents |
+| `/tasks` | GET | TasksPanel | List tasks with optional status filter |
+| `/tasks` | POST | TasksPanel | Create task with `{title, description, due_date, priority}` |
+| `/tasks/{id}` | PATCH | TasksPanel | Update task status/priority |
+| `/tasks/{id}` | DELETE | TasksPanel | Delete a task |
+| `/journal/entries` | GET | JournalPanel | List entries with pagination |
+| `/journal/entries` | POST | JournalPanel | Create journal entry |
+| `/journal/entries/{id}` | PATCH | JournalPanel | Update an entry |
+| `/journal/entries/{id}` | DELETE | JournalPanel | Delete an entry |
+| `/journal/search` | POST | JournalPanel | Semantic search with `{user_id, query, k}` |
+
+## SSE Streaming Format
+
+The `/chat` endpoint returns Server-Sent Events:
 
 ```
-http://localhost:5173
+data: {"token": "Hello"}
+data: {"token": " world"}
+data: {"token": "!"}
+data: {"done": true, "conversation_id": "uuid-here"}
 ```
 
----
+Sources are sent as a final token: `\n\nSOURCES:["file.pdf", "https://..."]`
 
-# 🔗 Backend Dependency
+## Build
 
-This UI connects to the **AI RAG Agent backend**.
-
-Backend repository:
-
+```bash
+npm run build     # Production build → dist/
+npm run preview   # Preview production build
 ```
-ai-rag-agent
-```
-
-Start the backend server:
-
-```
-uvicorn api:app --reload
-```
-
-Default API endpoint used by the UI:
-
-```
-http://localhost:8000/ask
-```
-
----
-
-# 💬 Example Request
-
-User asks:
-
-```
-What employee information is available?
-```
-
-The UI sends:
-
-```
-POST /ask
-{
-  "question": "What employee information is available?"
-}
-```
-
-The backend streams the answer, which is rendered progressively in the chat interface.
-
----
-
-# 📸 UI Layout
-
-```
-----------------------------------------
-| Sidebar |                            |
-| Chats   |        Chat Messages       |
-|         |                            |
-|         |                            |
-|         |----------------------------|
-|         |   Send message input       |
-----------------------------------------
-```
-
----
-
-# 🔄 Streaming Responses
-
-The UI reads streamed responses using the **ReadableStream API**:
-
-```javascript
-const reader = res.body.getReader()
-```
-
-This enables **real-time incremental response rendering**.
-
----
-
-# 🧩 Future Enhancements
-
-Planned improvements include:
-
-* 📜 Markdown rendering for answers
-* 🌙 Dark mode support
-* 🧠 Chat history persistence
-* 📂 Document upload for RAG ingestion
-* ⚡ WebSocket streaming
-* 🔐 Wallet / Web3 integration
-
----
-
-# 🔗 Related Repository
-
-Backend AI agent:
-
-```
-ai-rag-agent
-```
-
-Provides:
-
-* LangGraph agent orchestration
-* Retrieval-Augmented Generation (RAG)
-* FAISS vector database
-* Local LLM inference
-* FastAPI API layer
-
----
-
-# 📜 License
-
-MIT License

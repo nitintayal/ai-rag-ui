@@ -1,35 +1,19 @@
 import { useState } from "react";
 
-function extractSources(rawText) {
-  const sourceBlockPattern = /\bSOURCES?\s*:\s*(\[[\s\S]*?\])/i;
-  const match = rawText.match(sourceBlockPattern);
+const API_BASE = "http://localhost:8000";
 
-  if (!match) {
-    return { text: rawText, sources: null };
-  }
-
-  try {
-    const parsed = JSON.parse(match[1]);
-    const sources = Array.isArray(parsed)
-      ? parsed.filter((item) => typeof item === "string" && item.trim())
-      : null;
-
-    const text = rawText
-      .replace(sourceBlockPattern, "")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-
-    return { text, sources };
-  } catch {
-    return { text: rawText, sources: null };
-  }
-}
-
-export default function InputBox({ messages, setMessages, loading, setLoading }) {
+export default function InputBox({
+  messages,
+  setMessages,
+  loading,
+  setLoading,
+  conversationId,
+  setConversationId,
+}) {
   const [input, setInput] = useState("");
 
   const sendMessage = async () => {
-    if (!input || loading) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = { role: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -39,49 +23,86 @@ export default function InputBox({ messages, setMessages, loading, setLoading })
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/ask", {
+      const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ question }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          user_id: "default-user",
+          conversation_id: conversationId,
+        }),
       });
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-
-      let agentText = "", sources = null;
+      let agentText = "";
+      let sources = null;
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        agentText += decoder.decode(value, { stream: true });
-        const parsed = extractSources(agentText);
-        sources = parsed.sources;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
 
-          if (last?.role === "agent") {
-            return [
-              ...prev.slice(0, -1),
-              { role: "agent", text: parsed.text, sources },
-            ];
-          }
+          try {
+            const chunk = JSON.parse(jsonStr);
 
-          return [...prev, { role: "agent", text: parsed.text, sources }];
-        });
+            if (chunk.done) {
+              if (chunk.conversation_id) {
+                setConversationId(chunk.conversation_id);
+              }
+              continue;
+            }
+
+            if (chunk.token) {
+              const token = chunk.token;
+              // Check if this token contains SOURCES
+              if (token.startsWith("\n\nSOURCES:")) {
+                try {
+                  sources = JSON.parse(token.replace("\n\nSOURCES:", ""));
+                } catch {}
+                continue;
+              }
+              agentText += token;
+            }
+          } catch {}
+
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "agent") {
+              return [
+                ...prev.slice(0, -1),
+                { role: "agent", text: agentText, sources },
+              ];
+            }
+            return [...prev, { role: "agent", text: agentText, sources }];
+          });
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Chat error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { role: "agent", text: "Sorry, I couldn't reach the server. Make sure the backend and Ollama are running." },
+      ]);
     }
 
     setLoading(false);
   };
 
   const handleKey = (e) => {
-    if (e.key === "Enter") sendMessage();
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   return (
@@ -92,9 +113,8 @@ export default function InputBox({ messages, setMessages, loading, setLoading })
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Ask about your files..."
+          placeholder="Ask me anything..."
         />
-
         <button
           onClick={sendMessage}
           disabled={loading}

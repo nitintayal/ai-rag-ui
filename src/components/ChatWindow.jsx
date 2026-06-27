@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Message from "./Message";
 import InputBox from "./InputBox";
 
-export default function ChatWindow() {
+export default function ChatWindow({ conversationId, setConversationId }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
@@ -11,6 +11,13 @@ export default function ChatWindow() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Clear messages when conversation resets
+  useEffect(() => {
+    if (!conversationId) {
+      setMessages([]);
+    }
+  }, [conversationId]);
+
   return (
     <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
       <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
@@ -18,11 +25,11 @@ export default function ChatWindow() {
           Assistant
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-          Ask your knowledge base
+          AI Personal Assistant
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Search uploaded files, get streamed answers, and keep your working
-          notes open beside the chat.
+          Search your documents, browse the web, manage tasks, and keep a journal
+          — all in one place.
         </p>
       </div>
 
@@ -30,8 +37,13 @@ export default function ChatWindow() {
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {messages.length === 0 && (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-5 text-sm leading-6 text-slate-500">
-              Start with a question about one of your uploaded files. Answers
-              will stream here while your journal stays visible on the right.
+              <p className="font-medium text-slate-700 mb-2">Try asking:</p>
+              <ul className="space-y-1 text-slate-500">
+                <li>"What are the key points in my uploaded documents?"</li>
+                <li>"What's the latest news about AI?"</li>
+                <li>"Create a task to review the Q4 report by Friday"</li>
+                <li>"Remember that I prefer Python over JavaScript"</li>
+              </ul>
             </div>
           )}
 
@@ -39,7 +51,6 @@ export default function ChatWindow() {
             <Message key={i} role={msg.role} text={msg.text} sources={msg.sources} />
           ))}
 
-          {/* Typing indicator */}
           {loading && (
             <div className="flex gap-1">
               <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"></span>
@@ -57,6 +68,8 @@ export default function ChatWindow() {
         setMessages={setMessages}
         loading={loading}
         setLoading={setLoading}
+        conversationId={conversationId}
+        setConversationId={setConversationId}
       />
     </section>
   );
