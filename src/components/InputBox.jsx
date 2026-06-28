@@ -105,10 +105,10 @@ export default function InputBox({
   };
 
   return (
-    <div className="border-t border-slate-200 bg-white p-4 sm:px-6">
-      <div className="mx-auto flex max-w-3xl gap-3">
+    <div className="border-t border-slate-200 bg-white p-3 sm:p-4 sm:px-6">
+      <div className="mx-auto flex max-w-3xl gap-2 sm:gap-3">
         <input
-          className="flex-1 rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+          className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-slate-900"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
@@ -117,7 +117,7 @@ export default function InputBox({
         <button
           onClick={sendMessage}
           disabled={loading}
-          className="rounded-xl bg-slate-900 px-5 py-3 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="shrink-0 rounded-xl bg-slate-900 px-4 py-2.5 sm:px-5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           {loading ? "..." : "Send"}
         </button>
