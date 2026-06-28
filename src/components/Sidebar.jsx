@@ -6,6 +6,8 @@ export default function Sidebar({
   isExpanded,
   setIsExpanded,
   onNewChat,
+  user,
+  onLogout,
 }) {
   const navItemClass = (view) =>
     `w-full rounded-xl p-3 text-left transition ${
@@ -92,7 +94,21 @@ export default function Sidebar({
           isExpanded ? "p-4" : "p-3 text-center"
         }`}
       >
-        {isExpanded ? "AI Personal Assistant" : "AI"}
+        {isExpanded ? (
+          <div className="space-y-2">
+            <p className="truncate text-slate-300">{user?.name || user?.email || "User"}</p>
+            <button
+              onClick={onLogout}
+              className="w-full rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <button onClick={onLogout} title="Sign Out" className="text-slate-400 hover:text-white">
+            ⏻
+          </button>
+        )}
       </div>
     </aside>
   );

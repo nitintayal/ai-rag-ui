@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Message from "./Message";
 import InputBox from "./InputBox";
 
-export default function ChatWindow({ conversationId, setConversationId }) {
+export default function ChatWindow({ conversationId, setConversationId, token }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
@@ -70,6 +70,7 @@ export default function ChatWindow({ conversationId, setConversationId }) {
         setLoading={setLoading}
         conversationId={conversationId}
         setConversationId={setConversationId}
+        token={token}
       />
     </section>
   );

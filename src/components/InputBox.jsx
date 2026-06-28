@@ -8,6 +8,7 @@ export default function InputBox({
   setLoading,
   conversationId,
   setConversationId,
+  token,
 }) {
   const [input, setInput] = useState("");
 
@@ -24,10 +25,12 @@ export default function InputBox({
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           question,
-          user_id: "default-user",
           conversation_id: conversationId,
         }),
       });

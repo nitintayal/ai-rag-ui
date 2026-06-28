@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 const USER_ID = "default-user";
 
-export default function TasksPanel() {
+export default function TasksPanel({ token }) {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,15 +16,14 @@ export default function TasksPanel() {
     priority: "medium",
   });
 
+  const hdrs = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
   const loadTasks = async () => {
     setIsLoading(true);
     setError("");
     try {
-      const url =
-        filter === "all"
-          ? `${API_BASE}/tasks?user_id=${USER_ID}`
-          : `${API_BASE}/tasks?user_id=${USER_ID}&status=${filter}`;
-      const res = await fetch(url);
+      const url = filter === "all" ? `${API_BASE}/tasks` : `${API_BASE}/tasks?status=${filter}`;
+      const res = await fetch(url, { headers: hdrs });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       setTasks(await res.json());
     } catch (e) {
@@ -43,10 +42,8 @@ export default function TasksPanel() {
     if (!draft.title.trim() || isSaving) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/tasks?user_id=${USER_ID}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+      const res = await fetch(`${API_BASE}/tasks`, {
+        method: "POST", headers: hdrs, body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const task = await res.json();
@@ -64,19 +61,12 @@ export default function TasksPanel() {
   const toggleComplete = async (task) => {
     const newStatus = task.status === "done" ? "pending" : "done";
     try {
-      const res = await fetch(
-        `${API_BASE}/tasks/${task.id}?user_id=${USER_ID}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
+        method: "PATCH", headers: hdrs, body: JSON.stringify({ status: newStatus }),
+      });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const updated = await res.json();
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? updated : t))
-      );
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
     } catch (e) {
       console.error(e);
     }
@@ -84,9 +74,7 @@ export default function TasksPanel() {
 
   const deleteTask = async (taskId) => {
     try {
-      await fetch(`${API_BASE}/tasks/${taskId}?user_id=${USER_ID}`, {
-        method: "DELETE",
-      });
+      await fetch(`${API_BASE}/tasks/${taskId}`, { method: "DELETE", headers: hdrs });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (e) {
       console.error(e);

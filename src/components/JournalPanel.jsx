@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 
-const JOURNAL_USER_ID = "default-user";
 const JOURNAL_PAGE_SIZE = 10;
 const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -65,7 +64,7 @@ function mapApiEntryToCard(entry) {
   };
 }
 
-export default function JournalPanel() {
+export default function JournalPanel({ token }) {
   const [entries, setEntries] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -87,6 +86,8 @@ export default function JournalPanel() {
   const [hasMoreEntries, setHasMoreEntries] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
 
+  const hdrs = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
   const loadEntries = async ({ nextOffset = 0, append = false } = {}) => {
     if (append) {
       setIsLoadingMore(true);
@@ -97,9 +98,8 @@ export default function JournalPanel() {
 
     try {
       const response = await fetch(
-        `${API_BASE}/journal/entries?user_id=${encodeURIComponent(
-          JOURNAL_USER_ID
-        )}&limit=${JOURNAL_PAGE_SIZE}&offset=${nextOffset}`
+        `${API_BASE}/journal/entries?limit=${JOURNAL_PAGE_SIZE}&offset=${nextOffset}`,
+        { headers: hdrs }
       );
 
       if (!response.ok) {
@@ -176,11 +176,8 @@ export default function JournalPanel() {
   const createJournalEntry = async ({ title, body, mood }) => {
     const response = await fetch(`${API_BASE}/journal/entries`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: hdrs,
       body: JSON.stringify({
-        user_id: JOURNAL_USER_ID,
         title,
         content: body,
         mood: mood || null,
@@ -197,14 +194,10 @@ export default function JournalPanel() {
 
   const updateJournalEntry = async ({ entryId, title, body, mood }) => {
     const response = await fetch(
-      `${API_BASE}/journal/entries/${entryId}?user_id=${encodeURIComponent(
-        JOURNAL_USER_ID
-      )}`,
+      `${API_BASE}/journal/entries/${entryId}`,
       {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: hdrs,
         body: JSON.stringify({
           title,
           content: body,
@@ -223,12 +216,8 @@ export default function JournalPanel() {
 
   const deleteJournalEntry = async (entryId) => {
     const response = await fetch(
-      `${API_BASE}/journal/entries/${entryId}?user_id=${encodeURIComponent(
-        JOURNAL_USER_ID
-      )}`,
-      {
-        method: "DELETE",
-      }
+      `${API_BASE}/journal/entries/${entryId}`,
+      { method: "DELETE", headers: hdrs }
     );
 
     if (!response.ok) {
@@ -325,14 +314,8 @@ export default function JournalPanel() {
     try {
       const response = await fetch(`${API_BASE}/journal/search`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: JOURNAL_USER_ID,
-          query,
-          k: 10,
-        }),
+        headers: hdrs,
+        body: JSON.stringify({ query, k: 10 }),
       });
 
       if (!response.ok) {
