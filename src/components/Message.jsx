@@ -52,13 +52,15 @@ export default function Message({ role, text, sources }) {
   return (
     <div className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-xl rounded-2xl px-4 py-3 ${
+        className={`rounded-2xl px-4 py-3 overflow-hidden ${
           role === "user"
-            ? "bg-emerald-100 text-slate-900"
-            : "border border-slate-200 bg-white text-slate-800"
+            ? "max-w-[85%] bg-emerald-100 text-slate-900"
+            : "max-w-full w-full border border-slate-200 bg-white text-slate-800"
         }`}
       >
-        <ReactMarkdown>{text}</ReactMarkdown>
+        <div className="break-words overflow-x-auto text-sm leading-relaxed [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:text-xs [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0">
+          <ReactMarkdown>{text}</ReactMarkdown>
+        </div>
 
         {sources && (
           <div className="mt-4 border-t border-slate-200 pt-3">

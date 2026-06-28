@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE } from "../config";
 
 export default function FileUpload() {
   const [file, setFile] = useState(null);
@@ -18,7 +19,7 @@ export default function FileUpload() {
     const formData = new FormData();
     formData.append("file", file);
 
-    await fetch("http://localhost:8000/upload", {
+    await fetch(`${API_BASE}/upload`, {
       method: "POST",
       body: formData,
     });

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import Sidebar from "./components/Sidebar";
+import BottomNav from "./components/BottomNav";
 import ChatWindow from "./components/ChatWindow";
 import JournalPanel from "./components/JournalPanel";
 import TasksPanel from "./components/TasksPanel";
@@ -24,7 +25,7 @@ export default function App() {
         onNewChat={startNewChat}
       />
       <main className="flex-1 overflow-hidden">
-        <div className="h-full p-4 lg:p-6">
+        <div className="h-full p-4 pb-20 md:pb-4 lg:p-6 lg:pb-6">
           <div className="min-h-[calc(100vh-2rem)] lg:min-h-[calc(100vh-3rem)]">
             {activeView === "chat" && (
               <ChatWindow
@@ -37,6 +38,11 @@ export default function App() {
           </div>
         </div>
       </main>
+      <BottomNav
+        activeView={activeView}
+        setActiveView={setActiveView}
+        onNewChat={startNewChat}
+      />
     </div>
   );
 }

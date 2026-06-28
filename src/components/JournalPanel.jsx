@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE } from "../config";
 
 const JOURNAL_USER_ID = "default-user";
 const JOURNAL_PAGE_SIZE = 10;
@@ -96,7 +97,7 @@ export default function JournalPanel() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/journal/entries?user_id=${encodeURIComponent(
+        `${API_BASE}/journal/entries?user_id=${encodeURIComponent(
           JOURNAL_USER_ID
         )}&limit=${JOURNAL_PAGE_SIZE}&offset=${nextOffset}`
       );
@@ -173,7 +174,7 @@ export default function JournalPanel() {
   };
 
   const createJournalEntry = async ({ title, body, mood }) => {
-    const response = await fetch("http://localhost:8000/journal/entries", {
+    const response = await fetch(`${API_BASE}/journal/entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -196,7 +197,7 @@ export default function JournalPanel() {
 
   const updateJournalEntry = async ({ entryId, title, body, mood }) => {
     const response = await fetch(
-      `http://localhost:8000/journal/entries/${entryId}?user_id=${encodeURIComponent(
+      `${API_BASE}/journal/entries/${entryId}?user_id=${encodeURIComponent(
         JOURNAL_USER_ID
       )}`,
       {
@@ -222,7 +223,7 @@ export default function JournalPanel() {
 
   const deleteJournalEntry = async (entryId) => {
     const response = await fetch(
-      `http://localhost:8000/journal/entries/${entryId}?user_id=${encodeURIComponent(
+      `${API_BASE}/journal/entries/${entryId}?user_id=${encodeURIComponent(
         JOURNAL_USER_ID
       )}`,
       {
@@ -322,7 +323,7 @@ export default function JournalPanel() {
     setLoadError("");
 
     try {
-      const response = await fetch("http://localhost:8000/journal/search", {
+      const response = await fetch(`${API_BASE}/journal/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
