@@ -90,25 +90,37 @@ export default function Sidebar({
       <div className="flex-1" />
 
       <div
-        className={`border-t border-slate-800 text-sm text-slate-400 ${
-          isExpanded ? "p-4" : "p-3 text-center"
-        }`}
+        className={`border-t border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}
       >
-        {isExpanded ? (
-          <div className="space-y-2">
-            <p className="truncate text-slate-300">{user?.name || user?.email || "User"}</p>
-            <button
-              onClick={onLogout}
-              className="w-full rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-white"
-            >
-              Sign Out
-            </button>
-          </div>
-        ) : (
-          <button onClick={onLogout} title="Sign Out" className="text-slate-400 hover:text-white">
-            ⏻
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveView("settings")}
+          className={`${navItemClass("settings")} ${isExpanded ? "" : "px-2 text-center"}`}
+          title="Settings"
+        >
+          {isExpanded ? (
+            <div className="flex items-center gap-3">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="h-7 w-7 rounded-full" />
+              ) : (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 text-xs font-bold">
+                  {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="truncate text-sm">{user?.name || user?.email || "Settings"}</span>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="h-7 w-7 rounded-full" />
+              ) : (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 text-xs font-bold">
+                  {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          )}
+        </button>
       </div>
     </aside>
   );

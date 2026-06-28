@@ -3,6 +3,7 @@ export default function BottomNav({ activeView, setActiveView, onNewChat }) {
     { view: "chat", label: "Chat", icon: "💬" },
     { view: "tasks", label: "Tasks", icon: "✓" },
     { view: "journal", label: "Journal", icon: "📝" },
+    { view: "settings", label: "Settings", icon: "⚙" },
   ];
 
   return (

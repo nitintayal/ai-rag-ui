@@ -6,6 +6,7 @@ import BottomNav from "./components/BottomNav";
 import ChatWindow from "./components/ChatWindow";
 import JournalPanel from "./components/JournalPanel";
 import TasksPanel from "./components/TasksPanel";
+import SettingsPanel from "./components/SettingsPanel";
 
 function AppContent() {
   const { user, token, loading, logout, googleLogin } = useAuth();
@@ -64,6 +65,7 @@ function AppContent() {
             )}
             {activeView === "journal" && <JournalPanel token={token} />}
             {activeView === "tasks" && <TasksPanel token={token} />}
+            {activeView === "settings" && <SettingsPanel token={token} />}
           </div>
         </div>
       </main>
