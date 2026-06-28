@@ -1,5 +1,3 @@
-import FileUpload from "./FileUpload";
-
 export default function Sidebar({
   activeView,
   setActiveView,
@@ -50,7 +48,6 @@ export default function Sidebar({
           {isExpanded ? "+ New Chat" : "+"}
         </button>
 
-        {isExpanded ? <FileUpload /> : null}
       </div>
 
       <div className={`border-b border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}>

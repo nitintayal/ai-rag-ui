@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { API_BASE } from "../config";
 
 export default function InputBox({
@@ -11,6 +11,44 @@ export default function InputBox({
   token,
 }) {
   const [input, setInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+  const fileRef = useRef(null);
+
+  const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = [".pdf", ".txt", ".xlsx", ".csv"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!allowed.includes(ext)) {
+      setUploadMsg(`Only ${allowed.join(", ")} files supported`);
+      return;
+    }
+
+    setUploading(true);
+    setUploadMsg("");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${API_BASE}/upload`, {
+        method: "POST",
+        headers: hdrs,
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      setUploadMsg(`Uploaded: ${file.name}`);
+      setTimeout(() => setUploadMsg(""), 3000);
+    } catch (err) {
+      setUploadMsg(`Failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -25,14 +63,8 @@ export default function InputBox({
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          question,
-          conversation_id: conversationId,
-        }),
+        headers: { "Content-Type": "application/json", ...hdrs },
+        body: JSON.stringify({ question, conversation_id: conversationId }),
       });
 
       const reader = res.body.getReader();
@@ -58,32 +90,24 @@ export default function InputBox({
             const chunk = JSON.parse(jsonStr);
 
             if (chunk.done) {
-              if (chunk.conversation_id) {
-                setConversationId(chunk.conversation_id);
-              }
+              if (chunk.conversation_id) setConversationId(chunk.conversation_id);
               continue;
             }
 
             if (chunk.token) {
-              const token = chunk.token;
-              // Check if this token contains SOURCES
-              if (token.startsWith("\n\nSOURCES:")) {
-                try {
-                  sources = JSON.parse(token.replace("\n\nSOURCES:", ""));
-                } catch {}
+              const tk = chunk.token;
+              if (tk.startsWith("\n\nSOURCES:")) {
+                try { sources = JSON.parse(tk.replace("\n\nSOURCES:", "")); } catch {}
                 continue;
               }
-              agentText += token;
+              agentText += tk;
             }
           } catch {}
 
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (last?.role === "agent") {
-              return [
-                ...prev.slice(0, -1),
-                { role: "agent", text: agentText, sources },
-              ];
+              return [...prev.slice(0, -1), { role: "agent", text: agentText, sources }];
             }
             return [...prev, { role: "agent", text: agentText, sources }];
           });
@@ -93,7 +117,7 @@ export default function InputBox({
       console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
-        { role: "agent", text: "Sorry, I couldn't reach the server. Make sure the backend and Ollama are running." },
+        { role: "agent", text: "Sorry, I couldn't reach the server." },
       ]);
     }
 
@@ -109,7 +133,32 @@ export default function InputBox({
 
   return (
     <div className="border-t border-slate-200 bg-white p-3 sm:p-4 sm:px-6">
-      <div className="mx-auto flex max-w-3xl gap-2 sm:gap-3">
+      {uploadMsg && (
+        <div className={`mx-auto mb-2 max-w-3xl rounded-lg px-3 py-1.5 text-xs ${
+          uploadMsg.startsWith("Failed") ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"
+        }`}>
+          {uploadMsg}
+        </div>
+      )}
+      <div className="mx-auto flex max-w-3xl items-center gap-2 sm:gap-3">
+        <input type="file" ref={fileRef} onChange={handleUpload} className="hidden" accept=".pdf,.txt,.xlsx,.csv" />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading || loading}
+          className="shrink-0 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl border border-slate-300 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
+          title="Upload document"
+        >
+          {uploading ? (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+              <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          )}
+        </button>
         <input
           className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-slate-900"
           value={input}
