@@ -8,7 +8,7 @@ import JournalPanel from "./components/JournalPanel";
 import TasksPanel from "./components/TasksPanel";
 
 function AppContent() {
-  const { user, token, loading, logout } = useAuth();
+  const { user, token, loading, logout, googleLogin } = useAuth();
   const [activeView, setActiveView] = useState("chat");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [conversationId, setConversationId] = useState(null);
@@ -20,12 +20,11 @@ function AppContent() {
       const params = new URLSearchParams(hash.substring(1));
       const idToken = params.get("id_token");
       if (idToken) {
-        const { googleLogin } = useAuth();
-        googleLogin(idToken).catch(console.error);
         window.history.replaceState(null, "", window.location.pathname);
+        googleLogin(idToken).catch(console.error);
       }
     }
-  }, []);
+  }, [googleLogin]);
 
   const startNewChat = useCallback(() => {
     setConversationId(null);
