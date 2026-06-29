@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 import { API_BASE } from "../config";
 
 export default function SettingsPanel({ token }) {
+  const { dark, toggle } = useTheme();
   const { user, logout } = useAuth();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -83,7 +85,7 @@ export default function SettingsPanel({ token }) {
 
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-6 sm:px-6">
         {/* Profile Info */}
-        <div className="rounded-2xl border border-slate-200 p-5">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-lg font-semibold text-slate-900">Profile</h3>
 
           <div className="mt-4 flex items-center gap-4">
@@ -135,7 +137,7 @@ export default function SettingsPanel({ token }) {
         </div>
 
         {/* Change Password */}
-        <div className="rounded-2xl border border-slate-200 p-5">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-lg font-semibold text-slate-900">
             {isGoogleUser && !hasPassword ? "Set Password" : "Change Password"}
           </h3>
@@ -184,8 +186,25 @@ export default function SettingsPanel({ token }) {
           </div>
         </div>
 
+        {/* Appearance */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Appearance</h3>
+          <div className="mt-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-slate-700 dark:text-slate-300">Dark Mode</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Switch between light and dark theme</p>
+            </div>
+            <button
+              onClick={toggle}
+              className={`relative h-7 w-12 rounded-full transition ${dark ? "bg-slate-600" : "bg-slate-300"}`}
+            >
+              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${dark ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        </div>
+
         {/* Account Info */}
-        <div className="rounded-2xl border border-slate-200 p-5">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-lg font-semibold text-slate-900">Account</h3>
           <div className="mt-3 space-y-2 text-sm text-slate-600">
             <p><span className="font-medium text-slate-700">User ID:</span> {user?.id}</p>

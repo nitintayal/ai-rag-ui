@@ -1,9 +1,14 @@
+import ChatHistory from "./ChatHistory";
+
 export default function Sidebar({
   activeView,
   setActiveView,
   isExpanded,
   setIsExpanded,
   onNewChat,
+  onSelectConversation,
+  conversationId,
+  token,
   user,
   onLogout,
 }) {
@@ -47,7 +52,6 @@ export default function Sidebar({
         >
           {isExpanded ? "+ New Chat" : "+"}
         </button>
-
       </div>
 
       <div className={`border-b border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}>
@@ -84,11 +88,23 @@ export default function Sidebar({
         </div>
       </div>
 
-      <div className="flex-1" />
+      {/* Chat history */}
+      <div className={`flex-1 overflow-y-auto border-b border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}>
+        {isExpanded ? (
+          <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+            Recent Chats
+          </p>
+        ) : null}
+        <ChatHistory
+          token={token}
+          conversationId={conversationId}
+          onSelect={onSelectConversation}
+          isExpanded={isExpanded}
+        />
+      </div>
 
-      <div
-        className={`border-t border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}
-      >
+      {/* User / settings */}
+      <div className={`border-t border-slate-800 ${isExpanded ? "p-3" : "p-2"}`}>
         <button
           type="button"
           onClick={() => setActiveView("settings")}

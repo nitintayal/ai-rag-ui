@@ -104,8 +104,8 @@ export default function LoginPage() {
     }`;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 shadow-lg">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-900">AI Personal Assistant</h1>
           <p className="mt-2 text-sm text-slate-500">
