@@ -3,8 +3,8 @@ import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../config";
 
 export default function LoginPage() {
-  const { login, register, googleLogin } = useAuth();
-  const [mode, setMode] = useState("login"); // login | register | forgot
+  const { login, register, verifyEmail, googleLogin } = useAuth();
+  const [mode, setMode] = useState("login"); // login | register | forgot | verify_sent
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +39,8 @@ export default function LoginPage() {
     try {
       if (mode === "register") {
         await register(name, email, password);
+        setMode("verify_sent");
+        setSuccess("Check your email for a verification link.");
       } else {
         await login(email, password);
       }
@@ -108,7 +110,26 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {mode === "forgot" ? (
+        {mode === "verify_sent" ? (
+          <div className="mt-8 space-y-4 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Check your email</h2>
+            <p className="text-sm text-slate-500">
+              We've sent a verification link to <strong>{email}</strong>. Click the link to activate your account.
+            </p>
+            <p className="text-xs text-slate-400">Didn't receive it? Check your spam folder.</p>
+            <button
+              onClick={() => switchMode("login")}
+              className="mt-4 text-sm font-medium text-slate-900 hover:underline"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : mode === "forgot" ? (
           <form onSubmit={handleForgotPassword} className="mt-8 space-y-4">
             <input
               type="email"

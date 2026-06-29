@@ -27,6 +27,18 @@ function AppContent() {
     }
   }, [googleLogin]);
 
+  // Handle email verification link
+  const { verifyEmail } = useAuth();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyEmailAddr = params.get("verify_email");
+    const code = params.get("code");
+    if (verifyEmailAddr && code) {
+      window.history.replaceState(null, "", window.location.pathname);
+      verifyEmail(verifyEmailAddr, code).catch(console.error);
+    }
+  }, [verifyEmail]);
+
   const startNewChat = useCallback(() => {
     setConversationId(null);
     setActiveView("chat");

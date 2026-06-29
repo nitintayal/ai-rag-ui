@@ -62,7 +62,24 @@ export function AuthProvider({ children }) {
       throw new Error(err.detail || "Registration failed");
     }
     const data = await res.json();
-    saveAuth(data.token, data.user);
+    return data;
+  };
+
+  const verifyEmail = async (email, code) => {
+    const res = await fetch(`${API_BASE}/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Verification failed");
+    }
+    const data = await res.json();
+    if (data.token) {
+      saveAuth(data.token, data.user);
+    }
+    return data;
   };
 
   const googleLogin = async (idToken) => {
@@ -80,7 +97,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, verifyEmail, googleLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );
