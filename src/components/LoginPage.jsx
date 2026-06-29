@@ -38,9 +38,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === "register") {
-        await register(name, email, password);
-        setMode("verify_sent");
-        setSuccess("Check your email for a verification link.");
+        const result = await register(name, email, password);
+        if (result.status === "verification_sent") {
+          setMode("verify_sent");
+          setSuccess(result.message);
+        }
+        // if token returned, useAuth already logged in
       } else {
         await login(email, password);
       }

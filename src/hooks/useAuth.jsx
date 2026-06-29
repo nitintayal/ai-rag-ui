@@ -62,6 +62,9 @@ export function AuthProvider({ children }) {
       throw new Error(err.detail || "Registration failed");
     }
     const data = await res.json();
+    if (data.token) {
+      saveAuth(data.token, data.user);
+    }
     return data;
   };
 
