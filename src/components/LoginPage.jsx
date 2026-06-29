@@ -203,8 +203,8 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {mode === "login" && (
-              <p className="mt-3 text-right">
+            {mode === "login" && error && (
+              <p className="mt-2 text-right">
                 <button onClick={() => switchMode("forgot")} className="text-sm text-slate-500 hover:text-slate-900 hover:underline">
                   Forgot password?
                 </button>
