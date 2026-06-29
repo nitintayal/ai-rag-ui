@@ -9,33 +9,43 @@ import TasksPanel from "./components/TasksPanel";
 import SettingsPanel from "./components/SettingsPanel";
 
 function AppContent() {
-  const { user, token, loading, logout, googleLogin } = useAuth();
+  const { user, token, loading, logout, googleLogin, verifyEmail } = useAuth();
   const [activeView, setActiveView] = useState("chat");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [conversationId, setConversationId] = useState(null);
+  const [processingAuth, setProcessingAuth] = useState(
+    () => window.location.hash.includes("id_token=") || new URLSearchParams(window.location.search).has("verify_email")
+  );
 
   // Handle Google OAuth redirect
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("id_token=")) {
+      setProcessingAuth(true);
       const params = new URLSearchParams(hash.substring(1));
       const idToken = params.get("id_token");
+      window.history.replaceState(null, "", window.location.pathname);
       if (idToken) {
-        window.history.replaceState(null, "", window.location.pathname);
-        googleLogin(idToken).catch(console.error);
+        googleLogin(idToken)
+          .catch(console.error)
+          .finally(() => setProcessingAuth(false));
+      } else {
+        setProcessingAuth(false);
       }
     }
   }, [googleLogin]);
 
   // Handle email verification link
-  const { verifyEmail } = useAuth();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verifyEmailAddr = params.get("verify_email");
     const code = params.get("code");
     if (verifyEmailAddr && code) {
+      setProcessingAuth(true);
       window.history.replaceState(null, "", window.location.pathname);
-      verifyEmail(verifyEmailAddr, code).catch(console.error);
+      verifyEmail(verifyEmailAddr, code)
+        .catch(console.error)
+        .finally(() => setProcessingAuth(false));
     }
   }, [verifyEmail]);
 
@@ -44,10 +54,13 @@ function AppContent() {
     setActiveView("chat");
   }, []);
 
-  if (loading) {
+  if (loading || processingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-slate-500">Loading...</p>
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900" />
+          <p className="text-slate-500">{processingAuth ? "Signing you in..." : "Loading..."}</p>
+        </div>
       </div>
     );
   }

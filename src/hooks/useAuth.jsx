@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { API_BASE } from "../config";
 
 const AuthContext = createContext(null);
@@ -6,36 +6,52 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!localStorage.getItem("token"));
+  const didVerify = useRef(false);
 
   const saveAuth = useCallback((tokenValue, userData) => {
     localStorage.setItem("token", tokenValue);
     setToken(tokenValue);
     setUser(userData);
+    setLoading(false);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setLoading(false);
   }, []);
 
+  // Verify token only once on initial load (not after login/register)
   useEffect(() => {
-    if (!token) {
+    if (didVerify.current) return;
+    didVerify.current = true;
+
+    const savedToken = localStorage.getItem("token");
+    if (!savedToken) {
       setLoading(false);
       return;
     }
+
     fetch(`${API_BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${savedToken}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error("Invalid token");
         return res.json();
       })
-      .then((data) => setUser(data))
-      .catch(() => logout())
+      .then((data) => {
+        setUser(data);
+        setToken(savedToken);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setToken(null);
+        setUser(null);
+      })
       .finally(() => setLoading(false));
-  }, [token, logout]);
+  }, []);
 
   const login = async (email, password) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
