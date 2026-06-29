@@ -3,14 +3,24 @@ import { API_BASE } from "../config";
 
 const AuthContext = createContext(null);
 
+function loadStoredUser() {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [loading, setLoading] = useState(!!localStorage.getItem("token"));
+  const [user, setUser] = useState(() => loadStoredUser());
+  const [loading, setLoading] = useState(!loadStoredUser() && !!localStorage.getItem("token"));
   const didVerify = useRef(false);
 
   const saveAuth = useCallback((tokenValue, userData) => {
     localStorage.setItem("token", tokenValue);
+    localStorage.setItem("user", JSON.stringify(userData));
     setToken(tokenValue);
     setUser(userData);
     setLoading(false);
@@ -18,22 +28,32 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setToken(null);
     setUser(null);
     setLoading(false);
   }, []);
 
-  // Verify token only once on initial load (not after login/register)
+  // Verify token once on load — only if we have a token but no cached user
   useEffect(() => {
     if (didVerify.current) return;
     didVerify.current = true;
 
     const savedToken = localStorage.getItem("token");
+    const savedUser = loadStoredUser();
+
     if (!savedToken) {
       setLoading(false);
       return;
     }
 
+    // If we have cached user data, trust it — skip /auth/me
+    if (savedUser) {
+      setLoading(false);
+      return;
+    }
+
+    // No cached user but have token — verify once
     fetch(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${savedToken}` },
     })
@@ -42,11 +62,12 @@ export function AuthProvider({ children }) {
         return res.json();
       })
       .then((data) => {
+        localStorage.setItem("user", JSON.stringify(data));
         setUser(data);
-        setToken(savedToken);
       })
       .catch(() => {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setToken(null);
         setUser(null);
       })
