@@ -16,14 +16,17 @@ export default function TasksPanel({ token }) {
     priority: "medium",
   });
 
-  const hdrs = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  });
 
   const loadTasks = async () => {
     setIsLoading(true);
     setError("");
     try {
       const url = filter === "all" ? `${API_BASE}/tasks` : `${API_BASE}/tasks?status=${filter}`;
-      const res = await fetch(url, { headers: hdrs });
+      const res = await fetch(url, { headers: getHeaders() });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       setTasks(await res.json());
     } catch (e) {
@@ -35,15 +38,15 @@ export default function TasksPanel({ token }) {
   };
 
   useEffect(() => {
-    loadTasks();
-  }, [filter]);
+    if (token) loadTasks();
+  }, [filter, token]);
 
   const createTask = async () => {
     if (!draft.title.trim() || isSaving) return;
     setIsSaving(true);
     try {
       const res = await fetch(`${API_BASE}/tasks`, {
-        method: "POST", headers: hdrs, body: JSON.stringify(draft),
+        method: "POST", headers: getHeaders(), body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const task = await res.json();
@@ -62,7 +65,7 @@ export default function TasksPanel({ token }) {
     const newStatus = task.status === "done" ? "pending" : "done";
     try {
       const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
-        method: "PATCH", headers: hdrs, body: JSON.stringify({ status: newStatus }),
+        method: "PATCH", headers: getHeaders(), body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const updated = await res.json();
@@ -74,7 +77,7 @@ export default function TasksPanel({ token }) {
 
   const deleteTask = async (taskId) => {
     try {
-      await fetch(`${API_BASE}/tasks/${taskId}`, { method: "DELETE", headers: hdrs });
+      await fetch(`${API_BASE}/tasks/${taskId}`, { method: "DELETE", headers: getHeaders() });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (e) {
       console.error(e);

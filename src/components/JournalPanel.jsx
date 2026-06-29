@@ -86,7 +86,10 @@ export default function JournalPanel({ token }) {
   const [hasMoreEntries, setHasMoreEntries] = useState(false);
   const [totalEntries, setTotalEntries] = useState(0);
 
-  const hdrs = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  });
 
   const loadEntries = async ({ nextOffset = 0, append = false } = {}) => {
     if (append) {
@@ -99,7 +102,7 @@ export default function JournalPanel({ token }) {
     try {
       const response = await fetch(
         `${API_BASE}/journal/entries?limit=${JOURNAL_PAGE_SIZE}&offset=${nextOffset}`,
-        { headers: hdrs }
+        { headers: getHeaders() }
       );
 
       if (!response.ok) {
@@ -127,10 +130,11 @@ export default function JournalPanel({ token }) {
   };
 
   useEffect(() => {
-    loadEntries();
-  }, []);
+    if (token) loadEntries();
+  }, [token]);
 
   useEffect(() => {
+    if (!token) return;
     const query = searchQuery.trim();
 
     const timeoutId = setTimeout(() => {
@@ -143,7 +147,7 @@ export default function JournalPanel({ token }) {
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, token]);
 
   const startNewEntry = () => {
     setDraft({
@@ -176,7 +180,7 @@ export default function JournalPanel({ token }) {
   const createJournalEntry = async ({ title, body, mood }) => {
     const response = await fetch(`${API_BASE}/journal/entries`, {
       method: "POST",
-      headers: hdrs,
+      headers: getHeaders(),
       body: JSON.stringify({
         title,
         content: body,
@@ -197,7 +201,7 @@ export default function JournalPanel({ token }) {
       `${API_BASE}/journal/entries/${entryId}`,
       {
         method: "PATCH",
-        headers: hdrs,
+        headers: getHeaders(),
         body: JSON.stringify({
           title,
           content: body,
@@ -217,7 +221,7 @@ export default function JournalPanel({ token }) {
   const deleteJournalEntry = async (entryId) => {
     const response = await fetch(
       `${API_BASE}/journal/entries/${entryId}`,
-      { method: "DELETE", headers: hdrs }
+      { method: "DELETE", headers: getHeaders() }
     );
 
     if (!response.ok) {
@@ -314,7 +318,7 @@ export default function JournalPanel({ token }) {
     try {
       const response = await fetch(`${API_BASE}/journal/search`, {
         method: "POST",
-        headers: hdrs,
+        headers: getHeaders(),
         body: JSON.stringify({ query, k: 10 }),
       });
 
