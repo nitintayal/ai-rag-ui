@@ -122,6 +122,22 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const refreshUser = useCallback(async () => {
+    const currentToken = localStorage.getItem("token");
+    if (!currentToken) return;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem("user", JSON.stringify(data));
+      setUser(data);
+    } catch {
+      // silent — non-critical refresh
+    }
+  }, []);
+
   const googleLogin = async (idToken) => {
     const res = await fetch(`${API_BASE}/auth/google`, {
       method: "POST",
@@ -137,7 +153,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, verifyEmail, googleLogin, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, verifyEmail, googleLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

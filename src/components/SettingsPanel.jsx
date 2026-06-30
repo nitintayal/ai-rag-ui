@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
 import { API_BASE } from "../config";
 
+const PROVIDER_LABELS = {
+  gemini: "Google Gemini",
+  openrouter: "OpenRouter",
+  ollama: "Ollama (local)",
+};
+
 export default function SettingsPanel({ token }) {
   const { dark, toggle } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -14,9 +20,58 @@ export default function SettingsPanel({ token }) {
   const [passwordMsg, setPasswordMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // AI Model settings
+  const [availableModels, setAvailableModels] = useState({});
+  const [providersConfigured, setProvidersConfigured] = useState({});
+  const [globalDefaultProvider, setGlobalDefaultProvider] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState(user?.llm_provider || "");
+  const [selectedModel, setSelectedModel] = useState(user?.llm_model || "");
+  const [llmMsg, setLlmMsg] = useState("");
+  const [savingLlm, setSavingLlm] = useState(false);
+
   const hdrs = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_BASE}/auth/llm-settings/available`, { headers: hdrs })
+      .then((res) => res.json())
+      .then((data) => {
+        setAvailableModels(data.models || {});
+        setProvidersConfigured(data.providers_configured || {});
+        setGlobalDefaultProvider(data.global_default_provider || "");
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const saveLlmSettings = async () => {
+    if (savingLlm) return;
+    setSavingLlm(true);
+    setLlmMsg("");
+    try {
+      const res = await fetch(`${API_BASE}/auth/llm-settings`, {
+        method: "PATCH",
+        headers: hdrs,
+        body: JSON.stringify({
+          llm_provider: selectedProvider || null,
+          llm_model: selectedModel || null,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Failed");
+      setLlmMsg("Model preference saved");
+      if (refreshUser) refreshUser();
+    } catch (e) {
+      setLlmMsg(e.message);
+    } finally {
+      setSavingLlm(false);
+    }
+  };
+
+  const handleProviderChange = (provider) => {
+    setSelectedProvider(provider);
+    setSelectedModel(""); // reset model when provider changes
   };
 
   const updateProfile = async () => {
@@ -200,6 +255,62 @@ export default function SettingsPanel({ token }) {
             >
               <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${dark ? "translate-x-5" : "translate-x-0.5"}`} />
             </button>
+          </div>
+        </div>
+
+        {/* AI Model */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">AI Model</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Choose which AI provider and model answers your questions. Leave as "Default" to use the app's global setting
+            {globalDefaultProvider ? ` (currently ${PROVIDER_LABELS[globalDefaultProvider] || globalDefaultProvider})` : ""}.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Provider</label>
+              <select
+                value={selectedProvider}
+                onChange={(e) => handleProviderChange(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500"
+              >
+                <option value="">Default ({PROVIDER_LABELS[globalDefaultProvider] || "app default"})</option>
+                {Object.keys(availableModels).map((p) => (
+                  <option key={p} value={p} disabled={!providersConfigured[p]}>
+                    {PROVIDER_LABELS[p] || p}{!providersConfigured[p] ? " (not configured)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedProvider && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Model</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500"
+                >
+                  <option value="">Default model for this provider</option>
+                  {(availableModels[selectedProvider] || []).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={saveLlmSettings}
+              disabled={savingLlm}
+              className="rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 dark:hover:bg-slate-200 disabled:bg-slate-400"
+            >
+              {savingLlm ? "Saving..." : "Save Model Preference"}
+            </button>
+            {llmMsg && (
+              <p className={`text-sm ${llmMsg.includes("saved") ? "text-emerald-600" : "text-rose-600"}`}>
+                {llmMsg}
+              </p>
+            )}
           </div>
         </div>
 
