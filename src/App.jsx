@@ -91,7 +91,7 @@ function AppContent() {
   if (!user) return <LoginPage />;
 
   return (
-    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <Sidebar
         activeView={activeView}
         setActiveView={setActiveView}
@@ -104,21 +104,19 @@ function AppContent() {
         user={user}
         onLogout={logout}
       />
-      <main className="flex-1 overflow-hidden">
-        <div className="h-full p-4 pb-20 md:pb-4 lg:p-6 lg:pb-6">
-          <div className="min-h-[calc(100vh-2rem)] lg:min-h-[calc(100vh-3rem)]">
-            {activeView === "chat" && (
-              <ChatWindow
-                conversationId={conversationId}
-                setConversationId={setConversationId}
-                token={token}
-                loadedMessages={loadedMessages}
-              />
-            )}
-            {activeView === "journal" && <JournalPanel token={token} />}
-            {activeView === "tasks" && <TasksPanel token={token} />}
-            {activeView === "settings" && <SettingsPanel token={token} />}
-          </div>
+      <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col p-4 pb-20 md:pb-4 lg:p-6">
+          {activeView === "chat" && (
+            <ChatWindow
+              conversationId={conversationId}
+              setConversationId={setConversationId}
+              token={token}
+              loadedMessages={loadedMessages}
+            />
+          )}
+          {activeView === "journal" && <JournalPanel token={token} />}
+          {activeView === "tasks" && <TasksPanel token={token} />}
+          {activeView === "settings" && <SettingsPanel token={token} />}
         </div>
       </main>
       <BottomNav
