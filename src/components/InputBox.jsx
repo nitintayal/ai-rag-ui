@@ -89,6 +89,7 @@ export default function InputBox({
           const jsonStr = line.slice(6).trim();
           if (!jsonStr) continue;
 
+          let hasNewText = false;
           try {
             const chunk = JSON.parse(jsonStr);
 
@@ -104,8 +105,12 @@ export default function InputBox({
                 continue;
               }
               agentText += tk;
+              hasNewText = true;
             }
           } catch {}
+
+          // Skip rendering on empty/heartbeat tokens — avoids a blank message bubble
+          if (!hasNewText) continue;
 
           setMessages((prev) => {
             const last = prev[prev.length - 1];
@@ -116,12 +121,24 @@ export default function InputBox({
           });
         }
       }
+
+      // If the stream ended with no content at all, show one error bubble
+      if (!agentText) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "agent", text: "Sorry, I couldn't reach the server." },
+        ]);
+      }
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        { role: "agent", text: "Sorry, I couldn't reach the server." },
-      ]);
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        // Replace an empty/partial agent bubble instead of stacking a new one
+        if (last?.role === "agent" && (!last.text || last.text.trim() === "")) {
+          return [...prev.slice(0, -1), { role: "agent", text: "Sorry, I couldn't reach the server." }];
+        }
+        return [...prev, { role: "agent", text: "Sorry, I couldn't reach the server." }];
+      });
     }
 
     setLoading(false);
