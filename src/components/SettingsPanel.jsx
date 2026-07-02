@@ -26,6 +26,8 @@ export default function SettingsPanel({ token }) {
   const [globalDefaultProvider, setGlobalDefaultProvider] = useState("");
   const [selectedProvider, setSelectedProvider] = useState(user?.llm_provider || "");
   const [selectedModel, setSelectedModel] = useState(user?.llm_model || "");
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [llmMsg, setLlmMsg] = useState("");
   const [savingLlm, setSavingLlm] = useState(false);
 
@@ -51,16 +53,20 @@ export default function SettingsPanel({ token }) {
     setSavingLlm(true);
     setLlmMsg("");
     try {
+      const body = {
+        llm_provider: selectedProvider || null,
+        llm_model: selectedModel || null,
+      };
+      // Only send llm_api_key if the user typed something (empty string = clear it)
+      if (apiKey !== "") body.llm_api_key = apiKey;
       const res = await fetch(`${API_BASE}/auth/llm-settings`, {
         method: "PATCH",
         headers: hdrs,
-        body: JSON.stringify({
-          llm_provider: selectedProvider || null,
-          llm_model: selectedModel || null,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed");
-      setLlmMsg("Model preference saved");
+      setLlmMsg("Saved");
+      setApiKey(""); // clear the key field after saving (don't re-display it)
       if (refreshUser) refreshUser();
     } catch (e) {
       setLlmMsg(e.message);
@@ -71,7 +77,8 @@ export default function SettingsPanel({ token }) {
 
   const handleProviderChange = (provider) => {
     setSelectedProvider(provider);
-    setSelectedModel(""); // reset model when provider changes
+    setSelectedModel("");
+    setApiKey("");
   };
 
   const updateProfile = async () => {
@@ -296,6 +303,55 @@ export default function SettingsPanel({ token }) {
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {selectedProvider && selectedProvider !== "ollama" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Your API Key
+                  <span className="ml-2 text-xs font-normal text-slate-400">
+                    {user?.has_llm_api_key ? "● key saved" : "optional — uses app default if blank"}
+                  </span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={user?.has_llm_api_key ? "Enter new key to replace, or leave blank" : "sk-... or AIza..."}
+                    className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey((v) => !v)}
+                    className="shrink-0 rounded-xl border border-slate-300 px-3 py-2.5 text-xs text-slate-500 hover:bg-slate-50"
+                  >
+                    {showApiKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+                {user?.has_llm_api_key && apiKey === "" && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Leave blank and save to keep existing key, or type a new one to replace it.{" "}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setSavingLlm(true);
+                        try {
+                          const res = await fetch(`${API_BASE}/auth/llm-settings`, {
+                            method: "PATCH", headers: hdrs,
+                            body: JSON.stringify({ llm_provider: selectedProvider || null, llm_model: selectedModel || null, llm_api_key: "" }),
+                          });
+                          if (!res.ok) throw new Error((await res.json()).detail || "Failed");
+                          setLlmMsg("API key cleared");
+                          if (refreshUser) refreshUser();
+                        } catch (e) { setLlmMsg(e.message); }
+                        finally { setSavingLlm(false); }
+                      }}
+                      className="text-rose-500 hover:text-rose-700 underline"
+                    >Remove saved key</button>
+                  </p>
+                )}
               </div>
             )}
 
