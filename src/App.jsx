@@ -91,6 +91,8 @@ function AppContent() {
 
   if (!user) return <LoginPage />;
 
+  const VIEW_LABELS = { chat: "Assistant", tasks: "Tasks", calendar: "Calendar", journal: "Journal", settings: "Settings" };
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <Sidebar
@@ -106,19 +108,56 @@ function AppContent() {
         onLogout={logout}
       />
       <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col p-4 pb-20 md:pb-4 lg:p-6">
-          {activeView === "chat" && (
-            <ChatWindow
-              conversationId={conversationId}
-              setConversationId={setConversationId}
-              token={token}
-              loadedMessages={loadedMessages}
-            />
-          )}
-          {activeView === "journal" && <JournalPanel token={token} />}
-          {activeView === "tasks" && <TasksPanel token={token} />}
-          {activeView === "calendar" && <CalendarPanel token={token} />}
-          {activeView === "settings" && <SettingsPanel token={token} />}
+        {/* Mobile-only top bar */}
+        <div
+          className="md:hidden flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-3 shrink-0"
+          style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+        >
+          <span className="text-base font-semibold text-slate-900 dark:text-white">
+            {VIEW_LABELS[activeView] || "AI Assistant"}
+          </span>
+          <div className="flex items-center gap-2">
+            {activeView === "chat" && (
+              <button
+                onClick={startNewChat}
+                className="flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-white px-3 py-1.5 text-sm font-medium text-white dark:text-slate-900"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                New
+              </button>
+            )}
+            <button
+              onClick={() => setActiveView("settings")}
+              className="h-8 w-8 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center"
+            >
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                : <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{(user?.name || user?.email || "U").charAt(0).toUpperCase()}</span>
+              }
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="flex min-h-0 flex-1 flex-col p-3 md:p-4 lg:p-6"
+          style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+        >
+          <div className="flex min-h-0 flex-1 flex-col md:pb-0" style={{ paddingBottom: 0 }}>
+            {activeView === "chat" && (
+              <ChatWindow
+                conversationId={conversationId}
+                setConversationId={setConversationId}
+                token={token}
+                loadedMessages={loadedMessages}
+              />
+            )}
+            {activeView === "journal" && <JournalPanel token={token} />}
+            {activeView === "tasks" && <TasksPanel token={token} />}
+            {activeView === "calendar" && <CalendarPanel token={token} />}
+            {activeView === "settings" && <SettingsPanel token={token} />}
+          </div>
         </div>
       </main>
       <BottomNav

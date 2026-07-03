@@ -6,7 +6,12 @@ export default {
   ],
   darkMode: "class",
   theme: {
-    extend: {},
+    extend: {
+      spacing: {
+        "safe-b": "env(safe-area-inset-bottom)",
+        "safe-t": "env(safe-area-inset-top)",
+      },
+    },
   },
   plugins: [],
 }

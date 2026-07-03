@@ -2,6 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import Message from "./Message";
 import InputBox from "./InputBox";
 
+const PROMPTS = [
+  "What are the key points in my uploaded documents?",
+  "What's the latest news about AI?",
+  "Create a task to review the Q4 report by Friday",
+  "Remember that I prefer Python over JavaScript",
+];
+
 export default function ChatWindow({ conversationId, setConversationId, token, loadedMessages }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -11,7 +18,6 @@ export default function ChatWindow({ conversationId, setConversationId, token, l
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Load messages from a selected conversation, or clear for new chat
   useEffect(() => {
     if (loadedMessages) {
       setMessages(loadedMessages);
@@ -21,8 +27,9 @@ export default function ChatWindow({ conversationId, setConversationId, token, l
   }, [conversationId, loadedMessages]);
 
   return (
-    <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[28px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-slate-200 dark:border-slate-700 px-5 py-5 sm:px-6">
+    <section className="flex h-full flex-col overflow-hidden rounded-2xl md:rounded-[28px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      {/* Header — hidden on mobile (mobile top bar handles it) */}
+      <div className="hidden md:block border-b border-slate-200 dark:border-slate-700 px-6 py-5">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
           Assistant
         </p>
@@ -30,22 +37,32 @@ export default function ChatWindow({ conversationId, setConversationId, token, l
           AI Personal Assistant
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-          Search your documents, browse the web, manage tasks, and keep a journal
-          — all in one place.
+          Search your documents, browse the web, manage tasks, and keep a journal — all in one place.
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-slate-50/70 dark:bg-slate-950/50 p-5 sm:p-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-50/70 dark:bg-slate-950/50 p-3 sm:p-5 md:p-6">
+        <div className="mx-auto flex max-w-3xl flex-col gap-3 md:gap-4">
           {messages.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-5 text-sm leading-6 text-slate-500">
-              <p className="font-medium text-slate-700 mb-2">Try asking:</p>
-              <ul className="space-y-1 text-slate-500">
-                <li>"What are the key points in my uploaded documents?"</li>
-                <li>"What's the latest news about AI?"</li>
-                <li>"Create a task to review the Q4 report by Friday"</li>
-                <li>"Remember that I prefer Python over JavaScript"</li>
-              </ul>
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 text-center pt-4">
+                Try asking
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      // Surface the prompt into InputBox via a custom event
+                      window.dispatchEvent(new CustomEvent("chat-prompt", { detail: p }));
+                    }}
+                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-left text-sm text-slate-600 dark:text-slate-400 transition hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-900 dark:hover:text-white active:scale-[0.98]"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -54,14 +71,14 @@ export default function ChatWindow({ conversationId, setConversationId, token, l
           ))}
 
           {loading && (
-            <div className="flex gap-1">
-              <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce"></span>
-              <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce delay-150"></span>
-              <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce delay-300"></span>
+            <div className="flex items-center gap-1.5 px-1">
+              <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           )}
 
-          <div ref={bottomRef}></div>
+          <div ref={bottomRef} />
         </div>
       </div>
 

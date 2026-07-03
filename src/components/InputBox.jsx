@@ -1,17 +1,13 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { API_BASE } from "../config";
 import { useVoice } from "../hooks/useVoice";
 
-// Safari on iOS/macOS has known issues with streaming SSE over fetch — buffering
-// prevents tokens from arriving until the whole response is done. We detect it
-// and fall back to the non-streaming /chat/sync endpoint automatically.
 const isSafariWithoutStreaming = (() => {
   const ua = navigator.userAgent;
   const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
   const isIOS = /iP(hone|od|ad)/.test(ua);
-  // Chrome on iOS reports as Safari in UA but has the same WebKit streaming limits
   const isChromeIOS = /CriOS/.test(ua);
-  return (isSafari || isIOS || isChromeIOS);
+  return isSafari || isIOS || isChromeIOS;
 })();
 
 export default function InputBox({
@@ -27,35 +23,51 @@ export default function InputBox({
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
   const fileRef = useRef(null);
-  const onVoiceResult = useCallback((text) => setInput((prev) => prev ? prev + " " + text : text), []);
+  const textareaRef = useRef(null);
+
+  const onVoiceResult = useCallback(
+    (text) => setInput((prev) => (prev ? prev + " " + text : text)),
+    []
+  );
   const { listening, start: startVoice, stop: stopVoice, supported: voiceSupported } = useVoice(onVoiceResult);
 
   const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
 
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+  }, [input]);
+
+  // Receive suggested prompts from ChatWindow
+  useEffect(() => {
+    const handler = (e) => {
+      setInput(e.detail);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener("chat-prompt", handler);
+    return () => window.removeEventListener("chat-prompt", handler);
+  }, []);
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const allowed = [".pdf", ".txt", ".xlsx", ".csv"];
     const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
     if (!allowed.includes(ext)) {
-      setUploadMsg(`Only ${allowed.join(", ")} files supported`);
+      setUploadMsg(`Only ${allowed.join(", ")} supported`);
       return;
     }
-
     setUploading(true);
     setUploadMsg("");
     const formData = new FormData();
     formData.append("file", file);
-
     try {
-      const res = await fetch(`${API_BASE}/upload`, {
-        method: "POST",
-        headers: hdrs,
-        body: formData,
-      });
-      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      setUploadMsg(`Uploaded: ${file.name}`);
+      const res = await fetch(`${API_BASE}/upload`, { method: "POST", headers: hdrs, body: formData });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setUploadMsg(`✓ ${file.name}`);
       setTimeout(() => setUploadMsg(""), 3000);
     } catch (err) {
       setUploadMsg(`Failed: ${err.message}`);
@@ -70,16 +82,13 @@ export default function InputBox({
 
     const userMessage = { role: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
-
     const question = input;
     setInput("");
     setLoading(true);
 
     try {
-      // --- Safari fallback: use sync endpoint ---
       if (isSafariWithoutStreaming) {
-        const placeholder = { role: "agent", text: "…" };
-        setMessages((prev) => [...prev, placeholder]);
+        setMessages((prev) => [...prev, { role: "agent", text: "…" }]);
         const res = await fetch(`${API_BASE}/chat/sync`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...hdrs },
@@ -110,62 +119,41 @@ export default function InputBox({
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const jsonStr = line.slice(6).trim();
           if (!jsonStr) continue;
-
           let hasNewText = false;
           try {
             const chunk = JSON.parse(jsonStr);
-
-            if (chunk.done) {
-              if (chunk.conversation_id) setConversationId(chunk.conversation_id);
-              continue;
-            }
-
+            if (chunk.done) { if (chunk.conversation_id) setConversationId(chunk.conversation_id); continue; }
             if (chunk.token) {
               const tk = chunk.token;
-              if (tk.startsWith("\n\nSOURCES:")) {
-                try { sources = JSON.parse(tk.replace("\n\nSOURCES:", "")); } catch {}
-                continue;
-              }
+              if (tk.startsWith("\n\nSOURCES:")) { try { sources = JSON.parse(tk.replace("\n\nSOURCES:", "")); } catch {} continue; }
               agentText += tk;
               hasNewText = true;
             }
           } catch {}
-
-          // Skip rendering on empty/heartbeat tokens — avoids a blank message bubble
           if (!hasNewText) continue;
-
           setMessages((prev) => {
             const last = prev[prev.length - 1];
-            if (last?.role === "agent") {
-              return [...prev.slice(0, -1), { role: "agent", text: agentText, sources }];
-            }
+            if (last?.role === "agent") return [...prev.slice(0, -1), { role: "agent", text: agentText, sources }];
             return [...prev, { role: "agent", text: agentText, sources }];
           });
         }
       }
 
-      // If the stream ended with no content at all, show one error bubble
       if (!agentText) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "agent", text: "Sorry, I couldn't reach the server." },
-        ]);
+        setMessages((prev) => [...prev, { role: "agent", text: "Sorry, I couldn't reach the server." }]);
       }
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        // Replace an empty/partial agent bubble instead of stacking a new one
-        if (last?.role === "agent" && (!last.text || last.text.trim() === "")) {
+        if (last?.role === "agent" && !last.text?.trim()) {
           return [...prev.slice(0, -1), { role: "agent", text: "Sorry, I couldn't reach the server." }];
         }
         return [...prev, { role: "agent", text: "Sorry, I couldn't reach the server." }];
@@ -176,57 +164,73 @@ export default function InputBox({
   };
 
   const handleKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    // Desktop: Enter sends. Mobile: Enter adds newline (use send button).
+    if (e.key === "Enter" && !e.shiftKey && window.innerWidth >= 768) {
       e.preventDefault();
       sendMessage();
     }
   };
 
+  const canSend = input.trim().length > 0 && !loading;
+
   return (
-    <div className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:p-4 sm:px-6">
+    <div className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 sm:px-4 sm:py-3">
       {uploadMsg && (
-        <div className={`mx-auto mb-2 max-w-3xl rounded-lg px-3 py-1.5 text-xs ${
+        <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
           uploadMsg.startsWith("Failed") ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"
         }`}>
           {uploadMsg}
         </div>
       )}
-      <div className="mx-auto flex max-w-3xl items-center gap-2 sm:gap-3">
+
+      <div className="flex items-end gap-2">
+        {/* Attach */}
         <input type="file" ref={fileRef} onChange={handleUpload} className="hidden" accept=".pdf,.txt,.xlsx,.csv" />
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading || loading}
-          className="shrink-0 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+          className="shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
+          style={{ WebkitTapHighlightColor: "transparent" }}
           title="Upload document"
         >
           {uploading ? (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
               <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
             </svg>
           ) : (
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           )}
         </button>
-        <input
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Ask me anything..."
-        />
+
+        {/* Text input */}
+        <div className="relative min-w-0 flex-1">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            className="w-full resize-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            style={{ minHeight: "44px", maxHeight: "160px" }}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Ask me anything…"
+          />
+        </div>
+
+        {/* Voice */}
         {voiceSupported && (
           <button
             onClick={listening ? stopVoice : startVoice}
             disabled={loading}
-            className={`shrink-0 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl border transition ${
+            className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl border transition active:scale-95 ${
               listening
-                ? "border-rose-400 bg-rose-50 text-rose-500 dark:bg-rose-900/30 animate-pulse"
-                : "border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                ? "border-rose-400 bg-rose-50 dark:bg-rose-900/30 text-rose-500 animate-pulse"
+                : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
             } disabled:opacity-40`}
-            title={listening ? "Stop listening" : "Voice input"}
+            style={{ WebkitTapHighlightColor: "transparent" }}
+            title={listening ? "Stop" : "Voice input"}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
@@ -234,12 +238,28 @@ export default function InputBox({
             </svg>
           </button>
         )}
+
+        {/* Send */}
         <button
           onClick={sendMessage}
-          disabled={loading}
-          className="shrink-0 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 px-4 py-2.5 sm:px-5 sm:py-3 text-sm sm:text-base text-white transition hover:bg-slate-800 dark:hover:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-400"
+          disabled={!canSend}
+          className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl transition active:scale-95 ${
+            canSend
+              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+          }`}
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          {loading ? "..." : "Send"}
+          {loading ? (
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-30" />
+              <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          )}
         </button>
       </div>
     </div>
