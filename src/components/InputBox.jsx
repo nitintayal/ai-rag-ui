@@ -184,7 +184,7 @@ export default function InputBox({
       )}
 
       {/* Single container — buttons live inside the pill so alignment is always exact */}
-      <div className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-2 focus-within:ring-2 focus-within:ring-slate-900/30 dark:focus-within:ring-slate-500/30 transition">
+      <div className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-2 focus-within:ring-2 focus-within:ring-slate-900/30 dark:focus-within:ring-slate-500/30 transition-colors">
         <input type="file" ref={fileRef} onChange={handleUpload} className="hidden" accept=".pdf,.txt,.xlsx,.csv" />
 
         {/* Attach */}
