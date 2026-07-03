@@ -176,20 +176,22 @@ export default function InputBox({
   return (
     <div className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 sm:px-4 sm:py-3">
       {uploadMsg && (
-        <div className={`mb-2 rounded-lg px-3 py-1.5 text-xs ${
+        <div className={`mb-2 rounded-xl px-3 py-1.5 text-xs ${
           uploadMsg.startsWith("Failed") ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"
         }`}>
           {uploadMsg}
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        {/* Attach */}
+      {/* Single container — buttons live inside the pill so alignment is always exact */}
+      <div className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-2 focus-within:ring-2 focus-within:ring-slate-900/30 dark:focus-within:ring-slate-500/30 transition">
         <input type="file" ref={fileRef} onChange={handleUpload} className="hidden" accept=".pdf,.txt,.xlsx,.csv" />
+
+        {/* Attach */}
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading || loading}
-          className="shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition active:scale-95 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
+          className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 transition hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-40 active:scale-95"
           style={{ WebkitTapHighlightColor: "transparent" }}
           title="Upload document"
         >
@@ -205,29 +207,27 @@ export default function InputBox({
           )}
         </button>
 
-        {/* Text input */}
-        <div className="relative min-w-0 flex-1">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            className="w-full resize-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-500 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
-            style={{ minHeight: "44px", maxHeight: "160px" }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="Ask me anything…"
-          />
-        </div>
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          className="flex-1 min-w-0 resize-none bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none py-1.5 leading-relaxed"
+          style={{ minHeight: "36px", maxHeight: "160px" }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Ask me anything…"
+        />
 
         {/* Voice */}
         {voiceSupported && (
           <button
             onClick={listening ? stopVoice : startVoice}
             disabled={loading}
-            className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl border transition active:scale-95 ${
+            className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl transition active:scale-95 ${
               listening
-                ? "border-rose-400 bg-rose-50 dark:bg-rose-900/30 text-rose-500 animate-pulse"
-                : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                ? "bg-rose-100 dark:bg-rose-900/30 text-rose-500 animate-pulse"
+                : "text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
             } disabled:opacity-40`}
             style={{ WebkitTapHighlightColor: "transparent" }}
             title={listening ? "Stop" : "Voice input"}
@@ -243,20 +243,20 @@ export default function InputBox({
         <button
           onClick={sendMessage}
           disabled={!canSend}
-          className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-2xl transition active:scale-95 ${
+          className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl transition active:scale-95 ${
             canSend
               ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-200"
-              : "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+              : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
           }`}
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
           {loading ? (
-            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-30" />
               <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
             </svg>
           ) : (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
             </svg>
           )}
