@@ -254,14 +254,14 @@ export default function SettingsPanel({ token }) {
         {/* Appearance */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Appearance</h3>
-          <div className="mt-4 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="font-medium text-slate-700 dark:text-slate-300">Dark Mode</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">Switch between light and dark theme</p>
             </div>
             <button
               onClick={toggle}
-              className={`relative h-7 w-12 rounded-full transition ${dark ? "bg-slate-600" : "bg-slate-300"}`}
+              className={`relative shrink-0 h-7 w-12 rounded-full transition ${dark ? "bg-slate-600" : "bg-slate-300"}`}
             >
               <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${dark ? "translate-x-5" : "translate-x-0.5"}`} />
             </button>
