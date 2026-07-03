@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 
-const TODAY = new Date().toISOString().slice(0, 10);
+let _tmpId = 0;
+const tmpId = () => `_tmp_${++_tmpId}`;
 
 export default function CalendarPanel({ token }) {
   const [events, setEvents] = useState([]);
@@ -11,6 +12,7 @@ export default function CalendarPanel({ token }) {
   const [editingId, setEditingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [rangeFilter, setRangeFilter] = useState("upcoming");
+  const today = new Date().toISOString().slice(0, 10);
 
   const emptyDraft = { title: "", start_time: "", end_time: "", description: "", location: "", all_day: false, recurrence: "" };
   const [draft, setDraft] = useState(emptyDraft);
@@ -22,14 +24,14 @@ export default function CalendarPanel({ token }) {
 
   const rangeParams = () => {
     const now = new Date();
-    if (rangeFilter === "upcoming") return `start=${TODAY}`;
+    if (rangeFilter === "upcoming") return `start=${today}`;
     if (rangeFilter === "week") {
       const end = new Date(now); end.setDate(end.getDate() + 7);
-      return `start=${TODAY}&end=${end.toISOString().slice(0, 10)}`;
+      return `start=${today}&end=${end.toISOString().slice(0, 10)}`;
     }
     if (rangeFilter === "month") {
       const end = new Date(now); end.setMonth(end.getMonth() + 1);
-      return `start=${TODAY}&end=${end.toISOString().slice(0, 10)}`;
+      return `start=${today}&end=${end.toISOString().slice(0, 10)}`;
     }
     return "";
   };
@@ -43,7 +45,6 @@ export default function CalendarPanel({ token }) {
       setEvents(await res.json());
     } catch (e) {
       setError("Unable to load events.");
-      console.error(e);
     } finally {
       setIsLoading(false);
     }
@@ -56,6 +57,11 @@ export default function CalendarPanel({ token }) {
   const createEvent = async () => {
     if (!draft.title.trim() || !draft.start_time || isSaving) return;
     setIsSaving(true);
+    const id = tmpId();
+    const optimistic = { id, ...draft, recurrence: draft.recurrence || null, _pending: true };
+    setEvents((prev) => [optimistic, ...prev]);
+    setDraft(emptyDraft);
+    setIsCreating(false);
     try {
       const body = { ...draft };
       if (!body.end_time) delete body.end_time;
@@ -65,11 +71,11 @@ export default function CalendarPanel({ token }) {
       const res = await fetch(`${API_BASE}/calendar/events`, {
         method: "POST", headers: getHeaders(), body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      setEvents((prev) => [await res.json(), ...prev]);
-      setDraft(emptyDraft);
-      setIsCreating(false);
+      if (!res.ok) throw new Error();
+      const saved = await res.json();
+      setEvents((prev) => prev.map((e) => (e.id === id ? saved : e)));
     } catch (e) {
+      setEvents((prev) => prev.filter((e) => e.id !== id));
       setError("Failed to create event.");
     } finally {
       setIsSaving(false);
@@ -79,6 +85,10 @@ export default function CalendarPanel({ token }) {
   const saveEdit = async (eventId) => {
     if (!draft.title.trim() || isSaving) return;
     setIsSaving(true);
+    const prev = events.find((e) => e.id === eventId);
+    const optimistic = { ...prev, ...draft, recurrence: draft.recurrence || null };
+    setEvents((all) => all.map((e) => (e.id === eventId ? optimistic : e)));
+    setEditingId(null);
     try {
       const body = { ...draft };
       if (!body.recurrence) delete body.recurrence;
@@ -87,9 +97,9 @@ export default function CalendarPanel({ token }) {
       });
       if (!res.ok) throw new Error();
       const updated = await res.json();
-      setEvents((prev) => prev.map((e) => (e.id === eventId ? updated : e)));
-      setEditingId(null);
+      setEvents((all) => all.map((e) => (e.id === eventId ? updated : e)));
     } catch (e) {
+      setEvents((all) => all.map((e) => (e.id === eventId ? prev : e)));
       setError("Failed to update event.");
     } finally {
       setIsSaving(false);
@@ -111,11 +121,14 @@ export default function CalendarPanel({ token }) {
   };
 
   const deleteEvent = async (eventId) => {
+    const removed = events.find((e) => e.id === eventId);
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
     try {
-      await fetch(`${API_BASE}/calendar/events/${eventId}`, { method: "DELETE", headers: getHeaders() });
-      setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      const res = await fetch(`${API_BASE}/calendar/events/${eventId}`, { method: "DELETE", headers: getHeaders() });
+      if (!res.ok) throw new Error();
     } catch (e) {
-      console.error(e);
+      setEvents((prev) => [removed, ...prev]);
+      setError("Failed to delete event.");
     }
   };
 
@@ -123,16 +136,15 @@ export default function CalendarPanel({ token }) {
     if (!dt) return "";
     try {
       return new Date(dt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-    } catch {
-      return dt;
-    }
+    } catch { return dt; }
   };
 
   const EventForm = ({ onSave, onCancel, saveLabel }) => (
     <div className="rounded-[22px] border border-violet-300 bg-white p-4 shadow-sm">
       <div className="space-y-3">
         <input type="text" value={draft.title} onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
-          placeholder="Event title" className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Event title" autoFocus
+          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <label className="text-xs text-slate-500 mb-1 block">Start</label>
@@ -146,13 +158,15 @@ export default function CalendarPanel({ token }) {
           </div>
         </div>
         <input type="text" value={draft.location} onChange={(e) => setDraft((p) => ({ ...p, location: e.target.value }))}
-          placeholder="Location (optional)" className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Location (optional)"
+          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
         <textarea value={draft.description} onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-          placeholder="Description (optional)" rows={2} className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Description (optional)" rows={2}
+          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
         <div className="flex gap-3 items-center flex-wrap">
           <select value={draft.recurrence} onChange={(e) => setDraft((p) => ({ ...p, recurrence: e.target.value }))}
             className="rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400">
-            <option value="">No recurrence</option>
+            <option value="">No repeat</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -167,9 +181,10 @@ export default function CalendarPanel({ token }) {
       <div className="mt-4 flex gap-3">
         <button onClick={onSave} disabled={!draft.title.trim() || !draft.start_time || isSaving}
           className="rounded-xl bg-violet-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-800 disabled:bg-violet-300">
-          {isSaving ? "Saving..." : saveLabel}
+          {saveLabel}
         </button>
-        <button onClick={onCancel} className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-50">
+        <button onClick={onCancel}
+          className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-50">
           Cancel
         </button>
       </div>
@@ -210,7 +225,10 @@ export default function CalendarPanel({ token }) {
         )}
 
         {error && (
-          <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+          <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 flex items-center justify-between">
+            {error}
+            <button onClick={() => setError("")} className="ml-3 text-rose-400 hover:text-rose-700">✕</button>
+          </div>
         )}
 
         {isLoading && (
@@ -224,13 +242,17 @@ export default function CalendarPanel({ token }) {
         )}
 
         {events.map((event) => {
-          const isPast = event.start_time && event.start_time < new Date().toISOString();
+          const isPast = !event._pending && event.start_time && event.start_time < new Date().toISOString();
           if (editingId === event.id) {
             return <div key={event.id}><EventForm onSave={() => saveEdit(event.id)} onCancel={() => setEditingId(null)} saveLabel="Save Changes" /></div>;
           }
           return (
             <div key={event.id}
-              className={`rounded-[22px] border bg-white/75 p-4 shadow-sm backdrop-blur transition ${isPast ? "border-slate-200 opacity-60" : "border-violet-200/80"}`}>
+              className={`rounded-[22px] border bg-white/75 p-4 shadow-sm backdrop-blur transition ${
+                event._pending ? "border-violet-200/50 opacity-60"
+                  : isPast ? "border-slate-200 opacity-60"
+                  : "border-violet-200/80"
+              }`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900 truncate">{event.title}</h3>
@@ -238,26 +260,25 @@ export default function CalendarPanel({ token }) {
                     {formatDateTime(event.start_time)}
                     {event.end_time && <span className="text-slate-400"> – {formatDateTime(event.end_time)}</span>}
                   </p>
-                  {event.location && (
-                    <p className="mt-0.5 text-xs text-slate-500">📍 {event.location}</p>
-                  )}
-                  {event.description && (
-                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{event.description}</p>
-                  )}
-                  {event.recurrence && (
-                    <span className="mt-1 inline-block text-xs text-violet-500">↻ {event.recurrence}</span>
-                  )}
+                  {event.location && <p className="mt-0.5 text-xs text-slate-500">📍 {event.location}</p>}
+                  {event.description && <p className="mt-1 text-sm text-slate-500 line-clamp-2">{event.description}</p>}
+                  <div className="mt-1 flex gap-2 flex-wrap">
+                    {event.recurrence && <span className="text-xs text-violet-500">↻ {event.recurrence}</span>}
+                    {event._pending && <span className="text-xs text-slate-400">Saving…</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => startEdit(event)}
-                    className="rounded-lg border border-violet-200 px-3 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-50">
-                    Edit
-                  </button>
-                  <button onClick={() => deleteEvent(event.id)}
-                    className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50">
-                    Delete
-                  </button>
-                </div>
+                {!event._pending && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => startEdit(event)}
+                      className="rounded-lg border border-violet-200 px-3 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-50">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteEvent(event.id)}
+                      className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );

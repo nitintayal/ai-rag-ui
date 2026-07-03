@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 
 const TODAY = new Date().toISOString().slice(0, 10);
+let _tmpId = 0;
+const tmpId = () => `_tmp_${++_tmpId}`;
 
 export default function TasksPanel({ token }) {
   const [tasks, setTasks] = useState([]);
@@ -42,6 +44,20 @@ export default function TasksPanel({ token }) {
   const createTask = async () => {
     if (!draft.title.trim() || isSaving) return;
     setIsSaving(true);
+    const id = tmpId();
+    const optimistic = {
+      id,
+      title: draft.title,
+      description: draft.description,
+      due_date: draft.due_date || null,
+      priority: draft.priority,
+      recurrence: draft.recurrence || null,
+      status: "pending",
+      _pending: true,
+    };
+    setTasks((prev) => [optimistic, ...prev]);
+    setDraft(emptyDraft);
+    setIsCreating(false);
     try {
       const body = { ...draft };
       if (!body.recurrence) delete body.recurrence;
@@ -49,10 +65,10 @@ export default function TasksPanel({ token }) {
         method: "POST", headers: getHeaders(), body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      setTasks((prev) => [await res.json(), ...prev]);
-      setDraft(emptyDraft);
-      setIsCreating(false);
+      const saved = await res.json();
+      setTasks((prev) => prev.map((t) => (t.id === id ? saved : t)));
     } catch (e) {
+      setTasks((prev) => prev.filter((t) => t.id !== id));
       setError("Failed to create task.");
     } finally {
       setIsSaving(false);
@@ -62,17 +78,21 @@ export default function TasksPanel({ token }) {
   const saveEdit = async (taskId) => {
     if (!draft.title.trim() || isSaving) return;
     setIsSaving(true);
+    const prev = tasks.find((t) => t.id === taskId);
+    const optimistic = { ...prev, ...draft, recurrence: draft.recurrence || null };
+    setTasks((all) => all.map((t) => (t.id === taskId ? optimistic : t)));
+    setEditingId(null);
     try {
       const body = { ...draft };
       if (!body.recurrence) delete body.recurrence;
       const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
         method: "PATCH", headers: getHeaders(), body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
+      if (!res.ok) throw new Error();
       const updated = await res.json();
-      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
-      setEditingId(null);
+      setTasks((all) => all.map((t) => (t.id === taskId ? updated : t)));
     } catch (e) {
+      setTasks((all) => all.map((t) => (t.id === taskId ? prev : t)));
       setError("Failed to update task.");
     } finally {
       setIsSaving(false);
@@ -93,23 +113,29 @@ export default function TasksPanel({ token }) {
 
   const toggleComplete = async (task) => {
     const newStatus = task.status === "done" ? "pending" : "done";
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
     try {
       const res = await fetch(`${API_BASE}/tasks/${task.id}`, {
         method: "PATCH", headers: getHeaders(), body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...(await res.clone().json()) } : t)));
+      const updated = await res.json();
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
     } catch (e) {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
       console.error(e);
     }
   };
 
   const deleteTask = async (taskId) => {
+    const removed = tasks.find((t) => t.id === taskId);
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
     try {
-      await fetch(`${API_BASE}/tasks/${taskId}`, { method: "DELETE", headers: getHeaders() });
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      const res = await fetch(`${API_BASE}/tasks/${taskId}`, { method: "DELETE", headers: getHeaders() });
+      if (!res.ok) throw new Error();
     } catch (e) {
-      console.error(e);
+      setTasks((prev) => [removed, ...prev]);
+      setError("Failed to delete task.");
     }
   };
 
@@ -121,10 +147,8 @@ export default function TasksPanel({ token }) {
 
   const dueDateLabel = (task) => {
     if (!task.due_date || task.status === "done") return null;
-    const overdue = task.due_date < TODAY;
-    const dueToday = task.due_date === TODAY;
-    if (overdue) return <span className="text-xs font-semibold text-rose-600">Overdue · {task.due_date}</span>;
-    if (dueToday) return <span className="text-xs font-semibold text-amber-600">Due today</span>;
+    if (task.due_date < TODAY) return <span className="text-xs font-semibold text-rose-600">Overdue · {task.due_date}</span>;
+    if (task.due_date === TODAY) return <span className="text-xs font-semibold text-amber-600">Due today</span>;
     return <span className="text-xs text-slate-400">Due: {task.due_date}</span>;
   };
 
@@ -132,9 +156,11 @@ export default function TasksPanel({ token }) {
     <div className="rounded-[22px] border border-blue-300 bg-white p-4 shadow-sm">
       <div className="space-y-3">
         <input type="text" value={draft.title} onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
-          placeholder="Task title" className="w-full rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400" />
+          placeholder="Task title" autoFocus
+          className="w-full rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400" />
         <textarea value={draft.description} onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-          placeholder="Description (optional)" rows={2} className="w-full rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400" />
+          placeholder="Description (optional)" rows={2}
+          className="w-full rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400" />
         <div className="flex gap-3 flex-wrap">
           <input type="date" value={draft.due_date} onChange={(e) => setDraft((p) => ({ ...p, due_date: e.target.value }))}
             className="flex-1 min-w-[140px] rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400" />
@@ -146,7 +172,7 @@ export default function TasksPanel({ token }) {
           </select>
           <select value={draft.recurrence} onChange={(e) => setDraft((p) => ({ ...p, recurrence: e.target.value }))}
             className="rounded-xl border border-blue-200 px-4 py-3 outline-none focus:border-blue-400">
-            <option value="">No recurrence</option>
+            <option value="">No repeat</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -156,9 +182,10 @@ export default function TasksPanel({ token }) {
       <div className="mt-4 flex gap-3">
         <button onClick={onSave} disabled={!draft.title.trim() || isSaving}
           className="rounded-xl bg-blue-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800 disabled:bg-blue-300">
-          {isSaving ? "Saving..." : saveLabel}
+          {saveLabel}
         </button>
-        <button onClick={onCancel} className="rounded-xl border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-50">
+        <button onClick={onCancel}
+          className="rounded-xl border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-900 transition hover:bg-blue-50">
           Cancel
         </button>
       </div>
@@ -194,7 +221,10 @@ export default function TasksPanel({ token }) {
         )}
 
         {error && (
-          <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+          <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 flex items-center justify-between">
+            {error}
+            <button onClick={() => setError("")} className="ml-3 text-rose-400 hover:text-rose-700">✕</button>
+          </div>
         )}
 
         {isLoading && (
@@ -210,25 +240,27 @@ export default function TasksPanel({ token }) {
         {tasks.map((task) => {
           const overdue = task.due_date && task.due_date < TODAY && task.status !== "done";
           const dueToday = task.due_date === TODAY && task.status !== "done";
+
           if (editingId === task.id) {
-            return (
-              <div key={task.id}>
-                <TaskForm onSave={() => saveEdit(task.id)} onCancel={() => setEditingId(null)} saveLabel="Save Changes" />
-              </div>
-            );
+            return <div key={task.id}><TaskForm onSave={() => saveEdit(task.id)} onCancel={() => setEditingId(null)} saveLabel="Save Changes" /></div>;
           }
+
           return (
             <div key={task.id}
               className={`rounded-[22px] border bg-white/75 p-4 shadow-sm backdrop-blur transition ${
-                task.status === "done" ? "border-emerald-200/80 opacity-70"
+                task._pending ? "border-blue-200/50 opacity-60"
+                  : task.status === "done" ? "border-emerald-200/80 opacity-70"
                   : overdue ? "border-rose-300 bg-rose-50/50"
                   : dueToday ? "border-amber-300 bg-amber-50/50"
                   : "border-blue-200/80"
               }`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <button onClick={() => toggleComplete(task)}
-                    className={`mt-1 h-5 w-5 shrink-0 rounded border-2 transition ${task.status === "done" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 hover:border-blue-500"}`}
+                  <button onClick={() => !task._pending && toggleComplete(task)}
+                    className={`mt-1 h-5 w-5 shrink-0 rounded border-2 transition ${
+                      task.status === "done" ? "border-emerald-500 bg-emerald-500 text-white"
+                        : "border-slate-300 hover:border-blue-500"
+                    } ${task._pending ? "cursor-default" : ""}`}
                     title={task.status === "done" ? "Mark pending" : "Mark done"}>
                     {task.status === "done" && (
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -243,25 +275,26 @@ export default function TasksPanel({ token }) {
                     {task.description && <p className="mt-1 text-sm text-slate-500">{task.description}</p>}
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       {dueDateLabel(task)}
-                      {task.recurrence && (
-                        <span className="text-xs text-blue-500">↻ {task.recurrence}</span>
-                      )}
+                      {task.recurrence && <span className="text-xs text-blue-500">↻ {task.recurrence}</span>}
+                      {task._pending && <span className="text-xs text-slate-400">Saving…</span>}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${priorityColor[task.priority] || priorityColor.medium}`}>
-                    {task.priority}
-                  </span>
-                  <button onClick={() => startEdit(task)}
-                    className="rounded-lg border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 transition hover:bg-blue-50">
-                    Edit
-                  </button>
-                  <button onClick={() => deleteTask(task.id)}
-                    className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50">
-                    Delete
-                  </button>
-                </div>
+                {!task._pending && (
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide ${priorityColor[task.priority] || priorityColor.medium}`}>
+                      {task.priority}
+                    </span>
+                    <button onClick={() => startEdit(task)}
+                      className="rounded-lg border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700 transition hover:bg-blue-50">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteTask(task.id)}
+                      className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );

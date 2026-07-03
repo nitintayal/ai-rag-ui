@@ -2,6 +2,18 @@ import { useState, useRef, useCallback } from "react";
 import { API_BASE } from "../config";
 import { useVoice } from "../hooks/useVoice";
 
+// Safari on iOS/macOS has known issues with streaming SSE over fetch — buffering
+// prevents tokens from arriving until the whole response is done. We detect it
+// and fall back to the non-streaming /chat/sync endpoint automatically.
+const isSafariWithoutStreaming = (() => {
+  const ua = navigator.userAgent;
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+  const isIOS = /iP(hone|od|ad)/.test(ua);
+  // Chrome on iOS reports as Safari in UA but has the same WebKit streaming limits
+  const isChromeIOS = /CriOS/.test(ua);
+  return (isSafari || isIOS || isChromeIOS);
+})();
+
 export default function InputBox({
   messages,
   setMessages,
@@ -64,6 +76,25 @@ export default function InputBox({
     setLoading(true);
 
     try {
+      // --- Safari fallback: use sync endpoint ---
+      if (isSafariWithoutStreaming) {
+        const placeholder = { role: "agent", text: "…" };
+        setMessages((prev) => [...prev, placeholder]);
+        const res = await fetch(`${API_BASE}/chat/sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...hdrs },
+          body: JSON.stringify({ question, conversation_id: conversationId }),
+        });
+        const data = await res.json();
+        if (data.conversation_id) setConversationId(data.conversation_id);
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: "agent", text: data.answer || "Sorry, something went wrong.", sources: data.sources },
+        ]);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...hdrs },

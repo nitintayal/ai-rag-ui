@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
 import { API_BASE } from "../config";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 
 const PROVIDER_LABELS = {
   gemini: "Google Gemini",
@@ -12,6 +13,8 @@ const PROVIDER_LABELS = {
 export default function SettingsPanel({ token }) {
   const { dark, toggle } = useTheme();
   const { user, logout, refreshUser } = useAuth();
+  const push = usePushNotifications(token);
+  const [pushError, setPushError] = useState("");
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -372,6 +375,47 @@ export default function SettingsPanel({ token }) {
 
         {/* Account Info */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          {/* Push Notifications */}
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-5">
+            <h3 className="text-lg font-semibold text-slate-900">Push Notifications</h3>
+            {!push.supported ? (
+              <p className="mt-2 text-sm text-slate-500">Push notifications are not supported in this browser.</p>
+            ) : push.permission === "denied" ? (
+              <p className="mt-2 text-sm text-rose-600">
+                Notifications blocked. Allow them in your browser settings, then reload.
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-slate-600">
+                  Get a notification when tasks are due. Reminders are sent when you (or the server) trigger <code className="text-xs bg-slate-100 px-1 rounded">/tasks/send-reminders</code>.
+                </p>
+                {pushError && <p className="mt-2 text-sm text-rose-600">{pushError}</p>}
+                <button
+                  onClick={async () => {
+                    setPushError("");
+                    try {
+                      if (push.subscribed) await push.unsubscribe();
+                      else await push.subscribe();
+                    } catch (e) {
+                      setPushError(e.message || "Failed to change push subscription.");
+                    }
+                  }}
+                  disabled={push.loading}
+                  className={`mt-4 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+                    push.subscribed
+                      ? "border border-rose-300 text-rose-700 hover:bg-rose-50"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {push.loading ? "..." : push.subscribed ? "Turn off notifications" : "Enable notifications"}
+                </button>
+                {push.subscribed && (
+                  <p className="mt-2 text-xs text-emerald-600">● Notifications enabled on this device</p>
+                )}
+              </>
+            )}
+          </div>
+
           <h3 className="text-lg font-semibold text-slate-900">Account</h3>
           <div className="mt-3 space-y-2 text-sm text-slate-600">
             <p><span className="font-medium text-slate-700">User ID:</span> {user?.id}</p>

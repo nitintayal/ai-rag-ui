@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "../config";
 
+let _tmpId = 0;
+const tmpId = () => `_tmp_${++_tmpId}`;
+
 const JOURNAL_PAGE_SIZE = 10;
 const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -234,47 +237,54 @@ export default function JournalPanel({ token }) {
     const body = draft.body.trim();
     const mood = draft.mood.trim();
 
-    if (!title || !body || isSaving) {
-      return;
-    }
+    if (!title || !body || isSaving) return;
 
     setIsSaving(true);
     setSaveError("");
 
-    try {
-      const savedEntry = editingEntryId
-        ? await updateJournalEntry({
-            entryId: editingEntryId,
-            title,
-            body,
-            mood,
-          })
-        : await createJournalEntry({ title, body, mood });
-      const mappedEntry = mapApiEntryToCard(savedEntry);
-
-      if (editingEntryId) {
-        setEntries((prev) => [
-          mappedEntry,
-          ...prev.filter((entry) => entry.id !== editingEntryId),
-        ]);
-      } else {
-        setEntries((prev) => [mappedEntry, ...prev]);
-        setTotalEntries((prev) => prev + 1);
-      }
-
-      setDraft({
-        title: "",
-        mood: "Fresh",
-        body: "",
-      });
+    if (editingEntryId) {
+      // Optimistic update for edits
+      const prev = entries.find((e) => e.id === editingEntryId);
+      const optimistic = { ...prev, title, body, mood };
+      setEntries((all) => [optimistic, ...all.filter((e) => e.id !== editingEntryId)]);
       setEditingEntryId(null);
       setIsCreating(false);
+      setDraft({ title: "", mood: "Fresh", body: "" });
+      try {
+        const saved = await updateJournalEntry({ entryId: optimistic.id, title, body, mood });
+        setEntries((all) => all.map((e) => (e.id === optimistic.id ? mapApiEntryToCard(saved) : e)));
+      } catch (error) {
+        setEntries((all) => all.map((e) => (e.id === optimistic.id ? prev : e)));
+        setSaveError("Unable to update journal entry in the backend.");
+        console.error(error);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Optimistic create
+    const id = tmpId();
+    const optimistic = {
+      id,
+      title,
+      body,
+      mood,
+      entryDate: formatEntryDate(null),
+      time: getCurrentTimeLabel(),
+      _pending: true,
+    };
+    setEntries((prev) => [optimistic, ...prev]);
+    setTotalEntries((prev) => prev + 1);
+    setDraft({ title: "", mood: "Fresh", body: "" });
+    setIsCreating(false);
+    try {
+      const saved = await createJournalEntry({ title, body, mood });
+      setEntries((prev) => prev.map((e) => (e.id === id ? mapApiEntryToCard(saved) : e)));
     } catch (error) {
-      setSaveError(
-        editingEntryId
-          ? "Unable to update journal entry in the backend."
-          : "Unable to save journal entry to the backend."
-      );
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+      setTotalEntries((prev) => Math.max(0, prev - 1));
+      setSaveError("Unable to save journal entry to the backend.");
       console.error(error);
     } finally {
       setIsSaving(false);
@@ -282,22 +292,19 @@ export default function JournalPanel({ token }) {
   };
 
   const handleDeleteEntry = async (entryId) => {
-    if (deletingEntryId || isSaving) {
-      return;
-    }
+    if (deletingEntryId || isSaving) return;
+
+    const removed = entries.find((e) => e.id === entryId);
+    setEntries((prev) => prev.filter((e) => e.id !== entryId));
+    setTotalEntries((prev) => Math.max(0, prev - 1));
+    if (editingEntryId === entryId) cancelDraft();
 
     setDeletingEntryId(entryId);
-    setLoadError("");
-
     try {
       await deleteJournalEntry(entryId);
-      setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
-      setTotalEntries((prev) => Math.max(0, prev - 1));
-
-      if (editingEntryId === entryId) {
-        cancelDraft();
-      }
     } catch (error) {
+      setEntries((prev) => [removed, ...prev]);
+      setTotalEntries((prev) => prev + 1);
       setLoadError("Unable to delete journal entry from the backend.");
       console.error(error);
     } finally {
@@ -530,7 +537,7 @@ export default function JournalPanel({ token }) {
         {entries.map((entry) => (
           <article
             key={entry.id}
-            className="rounded-[22px] border border-amber-200/80 bg-white/75 p-4 shadow-sm backdrop-blur"
+            className={`rounded-[22px] border bg-white/75 p-4 shadow-sm backdrop-blur transition ${entry._pending ? "border-amber-200/50 opacity-60" : "border-amber-200/80"}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
