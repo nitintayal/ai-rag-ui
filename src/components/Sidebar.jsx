@@ -79,6 +79,14 @@ export default function Sidebar({
           </button>
           <button
             type="button"
+            onClick={() => setActiveView("calendar")}
+            className={`${navItemClass("calendar")} ${isExpanded ? "" : "px-2 text-center"}`}
+            title="Calendar"
+          >
+            {isExpanded ? "Calendar" : "Cal"}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveView("journal")}
             className={`${navItemClass("journal")} ${isExpanded ? "" : "px-2 text-center"}`}
             title="Journal"

@@ -7,6 +7,7 @@ import BottomNav from "./components/BottomNav";
 import ChatWindow from "./components/ChatWindow";
 import JournalPanel from "./components/JournalPanel";
 import TasksPanel from "./components/TasksPanel";
+import CalendarPanel from "./components/CalendarPanel";
 import SettingsPanel from "./components/SettingsPanel";
 
 function AppContent() {
@@ -116,6 +117,7 @@ function AppContent() {
           )}
           {activeView === "journal" && <JournalPanel token={token} />}
           {activeView === "tasks" && <TasksPanel token={token} />}
+          {activeView === "calendar" && <CalendarPanel token={token} />}
           {activeView === "settings" && <SettingsPanel token={token} />}
         </div>
       </main>

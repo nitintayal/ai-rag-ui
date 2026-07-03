@@ -6,6 +6,7 @@ export default function BottomNav({ activeView, setActiveView, onNewChat }) {
   const items = [
     { view: "chat", label: "Chat", icon: "💬" },
     { view: "tasks", label: "Tasks", icon: "✓" },
+    { view: "calendar", label: "Calendar", icon: "📅" },
     { view: "journal", label: "Journal", icon: "📝" },
     { view: "settings", label: "Settings", icon: "⚙" },
   ];
