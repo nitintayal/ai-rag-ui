@@ -3,10 +3,10 @@ import Message from "./Message";
 import InputBox from "./InputBox";
 
 const PROMPTS = [
-  "What are the key points in my uploaded documents?",
-  "What's the latest news about AI?",
-  "Create a task to review the Q4 report by Friday",
-  "Remember that I prefer Python over JavaScript",
+  "How's the weather today?",
+  "Create a reminder for my meeting tomorrow at 10 AM",
+  "Remember that I prefer Tea over Coffee",
+  "Summarize all my notes from last week",
 ];
 
 export default function ChatWindow({ conversationId, setConversationId, token, loadedMessages }) {
