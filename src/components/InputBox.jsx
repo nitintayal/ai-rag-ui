@@ -92,7 +92,7 @@ export default function InputBox({
         const res = await fetch(`${API_BASE}/chat/sync`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...hdrs },
-          body: JSON.stringify({ question, conversation_id: conversationId }),
+          body: JSON.stringify({ question, conversation_id: conversationId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
         });
         const data = await res.json();
         if (data.conversation_id) setConversationId(data.conversation_id);
@@ -107,7 +107,7 @@ export default function InputBox({
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...hdrs },
-        body: JSON.stringify({ question, conversation_id: conversationId }),
+        body: JSON.stringify({ question, conversation_id: conversationId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
       });
 
       const reader = res.body.getReader();
