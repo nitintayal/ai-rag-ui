@@ -111,6 +111,20 @@ function AppContent() {
         onLogout={logout}
       />
       <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Pull-to-refresh indicator (mobile only) */}
+        {(pullY > 0 || refreshing) && (
+          <div
+            className="md:hidden absolute top-0 left-0 right-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{ height: `${Math.max(pullY * 56, refreshing ? 56 : 0)}px`, transition: pullY === 0 ? "height 0.2s" : "none" }}
+          >
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 shadow-md ${refreshing ? "animate-spin" : ""}`}
+              style={{ opacity: pullY, transform: `rotate(${pullY * 360}deg)` }}>
+              <svg className="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+          </div>
+        )}
         {/* Mobile-only top bar */}
         <div
           className="md:hidden flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-3 shrink-0"
