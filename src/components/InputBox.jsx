@@ -211,7 +211,7 @@ export default function InputBox({
         <textarea
           ref={textareaRef}
           rows={1}
-          className="flex-1 min-w-0 resize-none bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none py-1.5 leading-relaxed"
+          className="flex-1 min-w-0 resize-none bg-transparent text-base md:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none py-1.5 leading-relaxed"
           style={{ minHeight: "36px", maxHeight: "160px" }}
           value={input}
           onChange={(e) => setInput(e.target.value)}
