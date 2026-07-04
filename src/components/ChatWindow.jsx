@@ -21,7 +21,7 @@ export default function ChatWindow({ conversationId, setConversationId, token, l
   useEffect(() => {
     if (loadedMessages) {
       setMessages(loadedMessages);
-    } else if (!conversationId) {
+    } else {
       setMessages([]);
     }
   }, [conversationId, loadedMessages]);

@@ -63,6 +63,7 @@ function AppContent() {
   const selectConversation = useCallback(async (convId) => {
     setActiveView("chat");
     setConversationId(convId);
+    setLoadedMessages(null);
     try {
       const res = await fetch(`${API_BASE}/conversations/${convId}/messages?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
