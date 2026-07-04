@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { API_BASE } from "./config";
+import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import LoginPage from "./components/LoginPage";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
@@ -92,6 +93,8 @@ function AppContent() {
   if (!user) return <LoginPage />;
 
   const VIEW_LABELS = { chat: "Assistant", tasks: "Tasks", calendar: "Calendar", journal: "Journal", settings: "Settings" };
+
+  const { pullY, refreshing } = usePullToRefresh();
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
