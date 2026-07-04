@@ -29,9 +29,8 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
-    setLoading(false);
+    // Reload the page so mobile viewport/scroll state is fully reset
+    window.location.href = "/";
   }, []);
 
   // Verify token once on load — only if we have a token but no cached user
