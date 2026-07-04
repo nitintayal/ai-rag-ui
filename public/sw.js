@@ -1,14 +1,25 @@
-// Service worker — handles push notifications and offline caching
+// Service worker — push notifications + network-first caching
 
-self.addEventListener("install", (e) => {
+const CACHE_VERSION = "ai-assistant-v3";
+
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
-  e.waitUntil(clients.claim());
+  // Delete all old caches so stale assets never survive a deploy
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((k) => k !== CACHE_VERSION)
+          .map((k) => caches.delete(k))
+      )
+    ).then(() => clients.claim())
+  );
 });
 
-// Push event: show a notification when a push message arrives
+// Push: show notification
 self.addEventListener("push", (e) => {
   let data = { title: "AI Assistant", body: "You have a new notification", tag: "default", url: "/" };
   try {
@@ -44,15 +55,41 @@ self.addEventListener("notificationclick", (e) => {
   );
 });
 
-// Minimal offline cache for the shell
-const CACHE = "ai-assistant-v1";
+// Fetch strategy:
+//   - API calls → always network (never cache)
+//   - HTML navigation → network first, fall back to cache for offline
+//   - Static assets (JS/CSS/images) → cache first (Vercel sets long-lived ETags)
 self.addEventListener("fetch", (e) => {
-  // Only cache GET requests for same-origin assets
   if (e.request.method !== "GET") return;
-  const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) return;
 
+  const url = new URL(e.request.url);
+
+  // Skip API calls entirely — never intercept
+  if (url.pathname.startsWith("/api") || url.origin !== self.location.origin) return;
+
+  // HTML navigation: network first so new deploys are picked up immediately
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_VERSION).then((c) => c.put(e.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Static assets: cache first, update in background
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request))
+    caches.open(CACHE_VERSION).then(async (cache) => {
+      const cached = await cache.match(e.request);
+      const fetchPromise = fetch(e.request).then((res) => {
+        cache.put(e.request, res.clone());
+        return res;
+      });
+      return cached || fetchPromise;
+    })
   );
 });
