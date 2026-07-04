@@ -351,11 +351,11 @@ export default function JournalPanel({ token }) {
             <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{entry.body}</p>
 
             {/* Actions */}
-            <div className="mt-3 flex gap-2 pt-3 border-t border-amber-100 dark:border-slate-700">
+            <div className="mt-2 flex gap-1.5 justify-end">
               <button
                 onClick={() => startEditEntry(entry)}
                 disabled={isSaving || deletingEntryId === entry.id}
-                className="flex-1 rounded-xl border border-amber-300 dark:border-slate-600 py-2 text-xs font-semibold text-amber-900 dark:text-amber-400 bg-amber-50 dark:bg-slate-700 disabled:opacity-40 active:scale-[0.98]"
+                className="rounded-lg border border-amber-300 dark:border-slate-600 px-3 py-1 text-xs font-medium text-amber-900 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 disabled:opacity-40 active:scale-95"
                 style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 Edit
@@ -363,7 +363,7 @@ export default function JournalPanel({ token }) {
               <button
                 onClick={() => handleDeleteEntry(entry.id)}
                 disabled={isSaving || deletingEntryId === entry.id}
-                className="flex-1 rounded-xl border border-rose-200 dark:border-rose-800/50 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 disabled:opacity-40 active:scale-[0.98]"
+                className="rounded-lg border border-rose-200 dark:border-rose-800/50 px-3 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-40 active:scale-95"
                 style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 {deletingEntryId === entry.id ? "Deleting…" : "Delete"}
