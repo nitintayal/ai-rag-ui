@@ -10,6 +10,7 @@ import JournalPanel from "./components/JournalPanel";
 import TasksPanel from "./components/TasksPanel";
 import CalendarPanel from "./components/CalendarPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import ChatHistory from "./components/ChatHistory";
 
 function AppContent() {
   const { user, token, loading, logout, googleLogin, verifyEmail } = useAuth();
