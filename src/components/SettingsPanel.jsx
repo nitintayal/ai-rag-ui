@@ -34,14 +34,14 @@ export default function SettingsPanel({ token }) {
   const [llmMsg, setLlmMsg] = useState("");
   const [savingLlm, setSavingLlm] = useState(false);
 
-  const hdrs = {
+  const hdrs = () => ({
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  });
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/auth/llm-settings/available`, { headers: hdrs })
+    fetch(`${API_BASE}/auth/llm-settings/available`, { headers: hdrs() })
       .then((res) => res.json())
       .then((data) => {
         setAvailableModels(data.models || {});
@@ -64,7 +64,7 @@ export default function SettingsPanel({ token }) {
       if (apiKey !== "") body.llm_api_key = apiKey;
       const res = await fetch(`${API_BASE}/auth/llm-settings`, {
         method: "PATCH",
-        headers: hdrs,
+        headers: hdrs(),
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed");
@@ -91,7 +91,7 @@ export default function SettingsPanel({ token }) {
     try {
       const res = await fetch(`${API_BASE}/auth/profile`, {
         method: "PATCH",
-        headers: hdrs,
+        headers: hdrs(),
         body: JSON.stringify({ name: name.trim() }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed");
@@ -118,7 +118,7 @@ export default function SettingsPanel({ token }) {
     try {
       const res = await fetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
-        headers: hdrs,
+        headers: hdrs(),
         body: JSON.stringify({
           current_password: currentPassword,
           new_password: newPassword,
@@ -342,7 +342,7 @@ export default function SettingsPanel({ token }) {
                         setSavingLlm(true);
                         try {
                           const res = await fetch(`${API_BASE}/auth/llm-settings`, {
-                            method: "PATCH", headers: hdrs,
+                            method: "PATCH", headers: hdrs(),
                             body: JSON.stringify({ llm_provider: selectedProvider || null, llm_model: selectedModel || null, llm_api_key: "" }),
                           });
                           if (!res.ok) throw new Error((await res.json()).detail || "Failed");
@@ -366,7 +366,7 @@ export default function SettingsPanel({ token }) {
               {savingLlm ? "Saving..." : "Save Model Preference"}
             </button>
             {llmMsg && (
-              <p className={`text-sm ${llmMsg.includes("saved") ? "text-emerald-600" : "text-rose-600"}`}>
+              <p className={`text-sm ${llmMsg.toLowerCase().includes("saved") ? "text-emerald-600" : "text-rose-600"}`}>
                 {llmMsg}
               </p>
             )}

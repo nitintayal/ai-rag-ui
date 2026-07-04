@@ -79,6 +79,9 @@ function AppContent() {
     }
   }, [token]);
 
+  // Must be called before any conditional returns (Rules of Hooks)
+  const { pullY, refreshing } = usePullToRefresh();
+
   if (loading || processingAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950">
@@ -93,8 +96,6 @@ function AppContent() {
   if (!user) return <LoginPage />;
 
   const VIEW_LABELS = { chat: "Assistant", tasks: "Tasks", calendar: "Calendar", journal: "Journal", settings: "Settings" };
-
-  const { pullY, refreshing } = usePullToRefresh();
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">

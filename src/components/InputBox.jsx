@@ -31,7 +31,7 @@ export default function InputBox({
   );
   const { listening, start: startVoice, stop: stopVoice, supported: voiceSupported } = useVoice(onVoiceResult);
 
-  const hdrs = token ? { Authorization: `Bearer ${token}` } : {};
+  const getHeaders = () => (token ? { Authorization: `Bearer ${token}` } : {});
 
   // Auto-resize textarea
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function InputBox({
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(`${API_BASE}/upload`, { method: "POST", headers: hdrs, body: formData });
+      const res = await fetch(`${API_BASE}/upload`, { method: "POST", headers: getHeaders(), body: formData });
       if (!res.ok) throw new Error(`${res.status}`);
       setUploadMsg(`✓ ${file.name}`);
       setTimeout(() => setUploadMsg(""), 3000);
@@ -91,9 +91,10 @@ export default function InputBox({
         setMessages((prev) => [...prev, { role: "agent", text: "…" }]);
         const res = await fetch(`${API_BASE}/chat/sync`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...hdrs },
+          headers: { "Content-Type": "application/json", ...getHeaders() },
           body: JSON.stringify({ question, conversation_id: conversationId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
         });
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
         const data = await res.json();
         if (data.conversation_id) setConversationId(data.conversation_id);
         setMessages((prev) => [
@@ -106,9 +107,10 @@ export default function InputBox({
 
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...hdrs },
+        headers: { "Content-Type": "application/json", ...getHeaders() },
         body: JSON.stringify({ question, conversation_id: conversationId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
       });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();

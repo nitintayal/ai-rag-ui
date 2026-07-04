@@ -139,52 +139,52 @@ export default function CalendarPanel({ token }) {
     } catch { return dt; }
   };
 
-  const EventForm = ({ onSave, onCancel, saveLabel }) => (
-    <div className="rounded-[22px] border border-violet-300 bg-white p-4 shadow-sm">
+  const inputCls = "w-full rounded-xl border border-violet-200 dark:border-slate-600 bg-violet-50 dark:bg-slate-700 px-4 py-3 text-base md:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-violet-400 transition";
+
+  const renderForm = (onSave, onCancel, saveLabel) => (
+    <div className="rounded-2xl border border-violet-300 dark:border-violet-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
       <div className="space-y-3">
         <input type="text" value={draft.title} onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
-          placeholder="Event title" autoFocus
-          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Event title" className={inputCls} />
         <div className="flex gap-3 flex-wrap">
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-xs text-slate-500 mb-1 block">Start</label>
+          <div className="flex-1 min-w-[180px]">
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Start</label>
             <input type="datetime-local" value={draft.start_time} onChange={(e) => setDraft((p) => ({ ...p, start_time: e.target.value }))}
-              className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+              className={inputCls} />
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-xs text-slate-500 mb-1 block">End (optional)</label>
+          <div className="flex-1 min-w-[180px]">
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">End (optional)</label>
             <input type="datetime-local" value={draft.end_time} onChange={(e) => setDraft((p) => ({ ...p, end_time: e.target.value }))}
-              className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+              className={inputCls} />
           </div>
         </div>
         <input type="text" value={draft.location} onChange={(e) => setDraft((p) => ({ ...p, location: e.target.value }))}
-          placeholder="Location (optional)"
-          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Location (optional)" className={inputCls} />
         <textarea value={draft.description} onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-          placeholder="Description (optional)" rows={2}
-          className="w-full rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400" />
+          placeholder="Description (optional)" rows={2} className={`${inputCls} resize-none`} />
         <div className="flex gap-3 items-center flex-wrap">
           <select value={draft.recurrence} onChange={(e) => setDraft((p) => ({ ...p, recurrence: e.target.value }))}
-            className="rounded-xl border border-violet-200 px-4 py-3 outline-none focus:border-violet-400">
+            className="rounded-xl border border-violet-200 dark:border-slate-600 bg-violet-50 dark:bg-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-violet-400 transition">
             <option value="">No repeat</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
           </select>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-            <input type="checkbox" checked={draft.all_day} onChange={(e) => setDraft((p) => ({ ...p, all_day: e.target.checked }))}
-              className="rounded" />
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+            <input type="checkbox" checked={draft.all_day} onChange={(e) => setDraft((p) => ({ ...p, all_day: e.target.checked }))} className="rounded" />
             All day
           </label>
         </div>
       </div>
-      <div className="mt-4 flex gap-3">
+      <div className="mt-3 flex gap-2">
         <button onClick={onSave} disabled={!draft.title.trim() || !draft.start_time || isSaving}
-          className="rounded-xl bg-violet-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-800 disabled:bg-violet-300">
+          className="flex-1 rounded-xl bg-violet-700 dark:bg-violet-600 py-2.5 text-sm font-semibold text-white disabled:opacity-40 active:scale-[0.98]"
+          style={{ WebkitTapHighlightColor: "transparent" }}>
           {saveLabel}
         </button>
         <button onClick={onCancel}
-          className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-violet-50">
+          className="rounded-xl border border-slate-200 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 active:scale-[0.98]"
+          style={{ WebkitTapHighlightColor: "transparent" }}>
           Cancel
         </button>
       </div>
@@ -192,98 +192,103 @@ export default function CalendarPanel({ token }) {
   );
 
   return (
-    <section className="flex h-full min-h-[320px] flex-col overflow-hidden rounded-[28px] border border-violet-200/70 bg-[linear-gradient(180deg,#f5f0ff_0%,#ede8ff_100%)] shadow-[0_24px_80px_rgba(109,40,217,0.10)]">
-      <div className="border-b border-violet-200/80 px-5 py-5 sm:px-6">
-        <div className="flex items-start justify-between gap-4">
+    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+      {/* Header */}
+      <div className="shrink-0 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 pt-4 pb-3 sm:px-6">
+        <div className="flex items-center justify-between gap-3 mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-700">Calendar</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-900">Events</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Calendar</p>
+            <h2 className="mt-0.5 text-xl font-bold text-slate-900 dark:text-white">My Calendar</h2>
           </div>
-          <button type="button" onClick={() => { setIsCreating(true); setEditingId(null); setDraft(emptyDraft); }}
-            className="rounded-full border border-violet-300 bg-white/70 px-4 py-2 text-sm font-medium text-violet-900 transition hover:bg-white">
-            New Event
+          <button onClick={() => { setIsCreating(true); setEditingId(null); setDraft(emptyDraft); }}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-700 dark:bg-violet-600 text-white active:scale-95"
+            style={{ WebkitTapHighlightColor: "transparent" }}>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
           </button>
         </div>
-        <div className="mt-4 flex gap-2 flex-wrap">
-          {[
-            { key: "upcoming", label: "Upcoming" },
-            { key: "week", label: "This Week" },
-            { key: "month", label: "This Month" },
-            { key: "all", label: "All" },
-          ].map(({ key, label }) => (
+        <div className="flex gap-2 flex-wrap">
+          {[{ key: "upcoming", label: "Upcoming" }, { key: "week", label: "This Week" }, { key: "month", label: "Month" }, { key: "all", label: "All" }].map(({ key, label }) => (
             <button key={key} onClick={() => setRangeFilter(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${rangeFilter === key ? "bg-violet-900 text-white" : "border border-violet-200 bg-white text-violet-800 hover:bg-violet-50"}`}>
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
+                rangeFilter === key
+                  ? "bg-violet-700 dark:bg-violet-600 text-white"
+                  : "border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+              }`}
+              style={{ WebkitTapHighlightColor: "transparent" }}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-5 sm:px-6">
-        {isCreating && (
-          <EventForm onSave={createEvent} onCancel={() => setIsCreating(false)} saveLabel="Create Event" />
-        )}
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
+        {isCreating && renderForm(createEvent, () => setIsCreating(false), "Create Event")}
 
         {error && (
-          <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 flex items-center justify-between">
+          <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-3 text-sm text-rose-700 dark:text-rose-400 flex items-center justify-between">
             {error}
             <button onClick={() => setError("")} className="ml-3 text-rose-400 hover:text-rose-700">✕</button>
           </div>
         )}
 
-        {isLoading && (
-          <div className="rounded-[22px] border border-violet-200 bg-white/75 p-4 text-sm text-slate-500">Loading events...</div>
-        )}
+        {isLoading && <div className="py-10 text-center text-sm text-slate-400 dark:text-slate-500">Loading events…</div>}
 
         {!isLoading && events.length === 0 && (
-          <div className="rounded-[22px] border border-dashed border-violet-300 bg-white/70 p-5 text-sm leading-6 text-slate-500">
-            No events yet. Create one or ask the assistant to schedule an event for you.
+          <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 bg-white/70 dark:bg-slate-800/50 p-6 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">No events yet.</p>
+            <button onClick={() => { setIsCreating(true); setDraft(emptyDraft); }}
+              className="mt-2 text-sm font-medium text-violet-700 dark:text-violet-400 underline underline-offset-2">
+              Create your first event
+            </button>
           </div>
         )}
 
         {events.map((event) => {
-          const isPast = !event._pending && event.start_time && event.start_time < new Date().toISOString();
+          // Fix #18: compare as Date objects, not strings
+          const isPast = !event._pending && event.start_time && new Date(event.start_time) < new Date();
           if (editingId === event.id) {
-            return <div key={event.id}><EventForm onSave={() => saveEdit(event.id)} onCancel={() => setEditingId(null)} saveLabel="Save Changes" /></div>;
+            return <div key={event.id}>{renderForm(() => saveEdit(event.id), () => setEditingId(null), "Save Changes")}</div>;
           }
           return (
             <div key={event.id}
-              className={`rounded-[22px] border bg-white/75 p-4 shadow-sm backdrop-blur transition ${
-                event._pending ? "border-violet-200/50 opacity-60"
-                  : isPast ? "border-slate-200 opacity-60"
-                  : "border-violet-200/80"
+              className={`rounded-2xl border bg-white dark:bg-slate-800 p-4 shadow-sm transition ${
+                event._pending ? "border-violet-200/50 dark:border-slate-600/50 opacity-60"
+                  : isPast ? "border-slate-200 dark:border-slate-700 opacity-60"
+                  : "border-violet-200/80 dark:border-slate-700"
               }`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-slate-900 truncate">{event.title}</h3>
-                  <p className="mt-0.5 text-sm text-violet-700 font-medium">
-                    {formatDateTime(event.start_time)}
-                    {event.end_time && <span className="text-slate-400"> – {formatDateTime(event.end_time)}</span>}
-                  </p>
-                  {event.location && <p className="mt-0.5 text-xs text-slate-500">📍 {event.location}</p>}
-                  {event.description && <p className="mt-1 text-sm text-slate-500 line-clamp-2">{event.description}</p>}
-                  <div className="mt-1 flex gap-2 flex-wrap">
-                    {event.recurrence && <span className="text-xs text-violet-500">↻ {event.recurrence}</span>}
-                    {event._pending && <span className="text-xs text-slate-400">Saving…</span>}
-                  </div>
+              <div className="min-w-0 mb-3">
+                <h3 className="font-semibold text-slate-900 dark:text-white break-words">{event.title}</h3>
+                <p className="mt-0.5 text-sm text-violet-700 dark:text-violet-400 font-medium">
+                  {formatDateTime(event.start_time)}
+                  {event.end_time && <span className="text-slate-400 dark:text-slate-500"> – {formatDateTime(event.end_time)}</span>}
+                </p>
+                {event.location && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">📍 {event.location}</p>}
+                {event.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{event.description}</p>}
+                <div className="mt-1 flex gap-2 flex-wrap">
+                  {event.recurrence && <span className="text-xs text-violet-500 dark:text-violet-400">↻ {event.recurrence}</span>}
+                  {event._pending && <span className="text-xs text-slate-400">Saving…</span>}
                 </div>
-                {!event._pending && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => startEdit(event)}
-                      className="rounded-lg border border-violet-200 px-3 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-50">
-                      Edit
-                    </button>
-                    <button onClick={() => deleteEvent(event.id)}
-                      className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50">
-                      Delete
-                    </button>
-                  </div>
-                )}
               </div>
+              {!event._pending && (
+                <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
+                  <button onClick={() => startEdit(event)}
+                    className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700 active:scale-[0.98]"
+                    style={{ WebkitTapHighlightColor: "transparent" }}>
+                    Edit
+                  </button>
+                  <button onClick={() => deleteEvent(event.id)}
+                    className="flex-1 rounded-xl border border-rose-200 dark:border-rose-800/50 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 active:scale-[0.98]"
+                    style={{ WebkitTapHighlightColor: "transparent" }}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

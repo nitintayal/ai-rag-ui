@@ -87,9 +87,8 @@ export default function JournalPanel({ token }) {
   useEffect(() => { if (token) loadEntries(); }, [token]);
 
   useEffect(() => {
-    if (!token) return;
-    const q = searchQuery.trim();
-    const id = setTimeout(() => (q ? handleSearch(q) : loadEntries()), 250);
+    if (!token || !searchQuery.trim()) return; // initial load handled by the effect above
+    const id = setTimeout(() => handleSearch(searchQuery.trim()), 250);
     return () => clearTimeout(id);
   }, [searchQuery, token]);
 
@@ -125,10 +124,12 @@ export default function JournalPanel({ token }) {
       setIsCreating(false);
       setDraft({ title: "", mood: "Fresh", body: "" });
       try {
-        const saved = await (await fetch(`${API_BASE}/journal/entries/${optimistic.id}`, {
+        const patchRes = await fetch(`${API_BASE}/journal/entries/${optimistic.id}`, {
           method: "PATCH", headers: getHeaders(),
           body: JSON.stringify({ title, content: body, mood: mood || null, entry_date: getCurrentDateValue() }),
-        })).json();
+        });
+        if (!patchRes.ok) throw new Error(`${patchRes.status}`);
+        const saved = await patchRes.json();
         setEntries((all) => all.map((e) => (e.id === optimistic.id ? mapApiEntryToCard(saved) : e)));
       } catch {
         setEntries((all) => all.map((e) => (e.id === optimistic.id ? prev : e)));
@@ -144,10 +145,12 @@ export default function JournalPanel({ token }) {
     setDraft({ title: "", mood: "Fresh", body: "" });
     setIsCreating(false);
     try {
-      const saved = await (await fetch(`${API_BASE}/journal/entries`, {
+      const postRes = await fetch(`${API_BASE}/journal/entries`, {
         method: "POST", headers: getHeaders(),
         body: JSON.stringify({ title, content: body, mood: mood || null, entry_date: getCurrentDateValue() }),
-      })).json();
+      });
+      if (!postRes.ok) throw new Error(`${postRes.status}`);
+      const saved = await postRes.json();
       setEntries((prev) => prev.map((e) => (e.id === id ? mapApiEntryToCard(saved) : e)));
     } catch {
       setEntries((prev) => prev.filter((e) => e.id !== id));

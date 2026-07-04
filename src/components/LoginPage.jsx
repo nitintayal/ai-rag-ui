@@ -119,7 +119,7 @@ export default function LoginPage() {
             </div>
           ) : mode === "forgot" ? (
             <form onSubmit={handleForgot} className="space-y-4">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" required className={field()} />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" required className={field("email")} />
               {error && <p className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 px-4 py-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
               {success && <p className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">{success}</p>}
               <button type="submit" disabled={loading}

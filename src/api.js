@@ -7,12 +7,16 @@ export function authHeaders(token) {
   };
 }
 
-export function authFetch(path, token, options = {}) {
-  return fetch(`${API_BASE}${path}`, {
+export async function authFetch(path, token, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       ...authHeaders(token),
       ...options.headers,
     },
   });
+  if (res.status === 401) {
+    window.dispatchEvent(new Event("auth:401"));
+  }
+  return res;
 }

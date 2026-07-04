@@ -32,6 +32,17 @@ export function AuthProvider({ children }) {
     window.location.href = "/";
   }, []);
 
+  // Global 401 interceptor — any panel that gets a 401 fires this event
+  useEffect(() => {
+    const handle401 = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
+    };
+    window.addEventListener("auth:401", handle401);
+    return () => window.removeEventListener("auth:401", handle401);
+  }, []);
+
   // Verify token once on load — only if we have a token but no cached user
   useEffect(() => {
     if (didVerify.current) return;
