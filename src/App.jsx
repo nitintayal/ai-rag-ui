@@ -17,6 +17,7 @@ function AppContent() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [conversationId, setConversationId] = useState(null);
   const [loadedMessages, setLoadedMessages] = useState(null);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [processingAuth, setProcessingAuth] = useState(
     () => window.location.hash.includes("id_token=") || new URLSearchParams(window.location.search).has("verify_email")
   );
@@ -136,26 +137,29 @@ function AppContent() {
           </span>
           <div className="flex items-center gap-2">
             {activeView === "chat" && (
-              <button
-                onClick={startNewChat}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 active:scale-95"
-                style={{ WebkitTapHighlightColor: "transparent" }}
-                title="New chat"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
+              <>
+                <button
+                  onClick={() => setShowHistoryDrawer(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 active:scale-95"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                  title="Chat history"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={startNewChat}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 active:scale-95"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                  title="New chat"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </>
             )}
-            <button
-              onClick={() => setActiveView("settings")}
-              className="h-8 w-8 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center"
-            >
-              {user?.avatar_url
-                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
-                : <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{(user?.name || user?.email || "U").charAt(0).toUpperCase()}</span>
-              }
-            </button>
           </div>
         </div>
 
@@ -178,6 +182,40 @@ function AppContent() {
             {activeView === "settings" && <SettingsPanel token={token} />}
           </div>
         </div>
+        {/* Mobile history drawer */}
+        {showHistoryDrawer && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowHistoryDrawer(false)}
+            />
+            {/* Drawer panel */}
+            <div className="relative ml-auto w-[85vw] max-w-sm h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
+              style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                <span className="font-semibold text-slate-900 dark:text-white">Chat History</span>
+                <button
+                  onClick={() => setShowHistoryDrawer(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 active:scale-95"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <ChatHistory
+                  token={token}
+                  conversationId={conversationId}
+                  onSelect={(id) => { selectConversation(id); setShowHistoryDrawer(false); }}
+                  isExpanded={true}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <BottomNav
         activeView={activeView}
