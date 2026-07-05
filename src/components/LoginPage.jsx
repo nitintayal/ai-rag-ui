@@ -162,7 +162,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {mode === "login" && error && (
+              {mode === "login" && (
                 <button onClick={() => switchMode("forgot")} className="mt-2 block w-full text-center text-sm text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition">
                   Forgot password?
                 </button>
