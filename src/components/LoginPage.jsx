@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../config";
 
@@ -9,10 +9,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Detect reset link: ?reset_email=...&code=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetEmail = params.get("reset_email");
+    const code = params.get("code");
+    if (resetEmail && code) {
+      setEmail(resetEmail);
+      setResetCode(code);
+      setMode("reset");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -66,6 +80,29 @@ export default function LoginPage() {
     }
   };
 
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    if (password.length < 6) { setError("At least 6 characters"); return; }
+    if (password !== confirmPassword) { setError("Passwords don't match"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: resetCode, new_password: password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Reset failed");
+      setSuccess("Password reset! You can now sign in.");
+      setPassword(""); setConfirmPassword("");
+      setTimeout(() => switchMode("login"), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogle = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) { setError("Google login not configured"); return; }
@@ -95,7 +132,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">AI Assistant</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {mode === "register" ? "Create your account" : mode === "forgot" ? "Reset your password" : "Welcome back"}
+            {mode === "register" ? "Create your account" : mode === "forgot" ? "Reset your password" : mode === "reset" ? "Set new password" : "Welcome back"}
           </p>
         </div>
 
@@ -125,6 +162,20 @@ export default function LoginPage() {
               <button type="submit" disabled={loading}
                 className="w-full rounded-2xl bg-slate-900 dark:bg-white py-3.5 text-sm font-semibold text-white dark:text-slate-900 transition active:scale-[0.98] disabled:opacity-50">
                 {loading ? "Sending…" : "Send Reset Link"}
+              </button>
+              <button type="button" onClick={() => switchMode("login")} className="w-full text-center text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition">
+                ← Back to sign in
+              </button>
+            </form>
+          ) : mode === "reset" ? (
+            <form onSubmit={handleReset} className="space-y-4">
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" required className={field("password")} autoComplete="new-password" />
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" required className={field("confirmPassword")} autoComplete="new-password" />
+              {error && <p className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 px-4 py-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+              {success && <p className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">{success}</p>}
+              <button type="submit" disabled={loading}
+                className="w-full rounded-2xl bg-slate-900 dark:bg-white py-3.5 text-sm font-semibold text-white dark:text-slate-900 transition active:scale-[0.98] disabled:opacity-50">
+                {loading ? "Saving…" : "Set New Password"}
               </button>
               <button type="button" onClick={() => switchMode("login")} className="w-full text-center text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition">
                 ← Back to sign in
