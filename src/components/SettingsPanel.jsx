@@ -422,6 +422,34 @@ export default function SettingsPanel({ token }) {
             <p><span className="font-medium text-slate-700">Auth:</span> {user?.auth_provider || "local"}</p>
             <p><span className="font-medium text-slate-700">Joined:</span> {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</p>
           </div>
+          {user?.is_admin && (
+            <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Admin</p>
+              <button
+                onClick={async () => {
+                  const res = await fetch(`${API_BASE}/admin/export-db`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (!res.ok) { alert("Export failed"); return; }
+                  const blob = await res.blob();
+                  const disposition = res.headers.get("content-disposition") || "";
+                  const match = disposition.match(/filename="?([^"]+)"?/);
+                  const filename = match ? match[1] : "assistant_export.db";
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = filename; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-800 text-left flex items-center gap-2"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export Database (SQLite)
+              </button>
+            </div>
+          )}
+
           <button
             onClick={logout}
             className="mt-4 rounded-xl border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
